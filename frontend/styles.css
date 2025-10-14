@@ -1,0 +1,166 @@
+:root {
+  --pm-blue: #002b5b;
+  --pm-grey: #e8eef4;
+  --pm-text: #002b5b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f7f9fc;
+  color: var(--pm-text);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--pm-blue);
+  color: #fff;
+  padding: 16px 24px;
+}
+
+header img {
+  height: 44px;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e3e9f1;
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+h2 {
+  margin: 0 0 12px;
+}
+
+nav {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+section {
+  display: none;
+}
+
+section.active {
+  display: block;
+}
+
+.right {
+  margin-left: auto;
+}
+
+.muted {
+  color: #5a6b80;
+}
+
+.login {
+  max-width: 420px;
+  margin: 40px auto;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select {
+  padding: 10px 12px;
+  border: 1px solid #b7c3d0;
+  border-radius: 6px;
+  min-width: 220px;
+  outline: none;
+  transition: 0.2s;
+  background: #fff;
+  color: var(--pm-text);
+}
+
+input:focus,
+select:focus {
+  border-color: var(--pm-blue);
+  box-shadow: 0 0 0 3px rgba(0, 43, 91, 0.1);
+}
+
+button {
+  background: var(--pm-blue);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #004080;
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #fff;
+}
+
+th,
+td {
+  border: 1px solid #dde6ef;
+  padding: 9px;
+  text-align: left;
+}
+
+th {
+  background: var(--pm-blue);
+  color: #fff;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.pill {
+  display: inline-block;
+  background: #eef4fb;
+  color: var(--pm-blue);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+
+form label {
+  display: block;
+  margin-bottom: 12px;
+}
+
+form label span {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.hidden {
+  display: none !important;
+}
