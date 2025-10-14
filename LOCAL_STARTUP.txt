@@ -1,0 +1,204 @@
+HardCups-V2: Opstartprocedure (Windows, macOS & Linux)
+
+Overzicht
+---------
+Dit document beschrijft hoe je het volledige HardCups-systeem (Flask-backend en statische frontend)
+op een eigen computer start. De stappen zijn getest op Windows 11 (PowerShell), macOS en Linux.
+
+Voorwaarden
+-----------
+1. **Software**
+   - Python 3.10 of hoger.
+   - Windows: PowerShell 5.1 of hoger met het `py`-launcherscript of `python` in het pad.
+   - macOS/Linux: een Bash-shell voor het `start_local.sh`-script.
+   - (Optioneel) NFC-hardware + drivers wanneer je echte NFC-scans wilt testen. Zonder hardware
+     schakelt de backend automatisch over op simulatiemodus.
+2. **Poorten**
+   - Zorg dat poorten **5000** (backend API) en **8001** (frontend) vrij zijn.
+   - Voor extern gebruik: open deze poorten ook in de firewall en router van de server zodat andere
+     computers verbinding kunnen maken.
+
+Structuur
+---------
+```
+backend/        -> Flask API, requirements en databasebestanden
+frontend/       -> Statische assets (HTML, CSS, JS)
+start_local.sh  -> Bash-opstartscript voor macOS/Linux/WSL2
+start_windows.ps1 -> PowerShell-opstartscript voor native Windows
+start_windows.bat -> Snelle launcher die PowerShell met juiste parameters opent
+```
+
+Snelle start op Windows (PowerShell)
+------------------------------------
+1. Open **PowerShell** (geen "Opdrachtprompt"). Zoek bijvoorbeeld in Start naar
+   "PowerShell" en kies de blauwe *Windows PowerShell* of *Windows Terminal*
+   (PowerShell-profiel) en navigeer naar de hoofdmap van de repository.
+2. Sta (eenmalig) het uitvoeren van lokale scripts toe wanneer dat nog niet gebeurd is:
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+   ```
+   > Je kunt dit commando overslaan als je al eerder zelfgeschreven scripts hebt uitgevoerd.
+   > Voer de opdracht letterlijk uit **zonder** extra aanhalingstekens.
+3. Start het systeem:
+   ```powershell
+   ./start_windows.ps1
+   ```
+   - Stel alternatieve hosts/poorten in via omgevingsvariabelen, bijvoorbeeld:
+     ```powershell
+     $env:BACKEND_HOST = '0.0.0.0'
+     $env:FRONTEND_PORT = '9000'
+     ./start_windows.ps1
+     ```
+4. Het script voert automatisch de volgende stappen uit:
+   - Maakt (indien nodig) een virtuele omgeving in `.venv\` aan met de eerste beschikbare Python 3.10+ installatie.
+   - Installeert `backend/requirements.txt` (overslaan kan met `SKIP_PIP_INSTALL=1 ./start_windows.ps1`).
+   - Start de Flask-backend op `http://<host>:<poort>` (standaard `127.0.0.1:5000`).
+   - Start een eenvoudige webserver voor de frontend op `http://<host>:<poort>` (standaard
+     `127.0.0.1:8001`).
+   - Toont realtime logregels van beide processen in hetzelfde venster.
+5. Wacht tot de melding "Frontend beschikbaar" verschijnt en open daarna een browser op
+   `http://<host>:<frontend-poort>` (standaard `http://127.0.0.1:8001`).
+6. Log in met de standaard admin-gegevens:
+   - Gebruikersnaam: `Tebbensj`
+   - Wachtwoord: `Proefmei2026!`
+7. Druk op **Enter** in hetzelfde PowerShell-venster om backend en frontend netjes te stoppen.
+
+Starten via dubbelklik of Opdrachtprompt
+---------------------------------------
+Wil je het script starten vanuit de Opdrachtprompt of door dubbel te klikken in de Verkenner?
+
+1. Dubbelklik op `start_windows.bat` **of** voer onderstaande opdracht uit vanuit `cmd.exe`:
+   ```cmd
+   start_windows.bat
+   ```
+2. Het batchbestand start automatisch PowerShell met een tijdelijke
+   *ExecutionPolicy Bypass*, zodat `start_windows.ps1` ook op systemen met strenge
+   standaardinstellingen kan draaien.
+3. Volg de aanwijzingen in het geopende PowerShell-venster. Sluit af door op **Enter** te drukken.
+
+Snelle start op macOS/Linux (Bash)
+---------------------------------
+1. Open een terminal in de hoofdmap van de repository.
+2. Maak het script eenmalig uitvoerbaar (indien nodig):
+   ```bash
+   chmod +x start_local.sh
+   ```
+3. Start het systeem:
+   ```bash
+   ./start_local.sh
+   ```
+   > **Tip**: stel andere hosts/poorten in met omgevingsvariabelen, bijvoorbeeld
+   > `BACKEND_PORT=5050 FRONTEND_PORT=9000 ./start_local.sh`.
+4. Het script maakt automatisch een virtuele omgeving aan (indien nodig), installeert dependencies,
+   start backend en frontend en toont logging in dezelfde terminal.
+5. Open `http://<host>:<frontend-poort>` in je browser (standaard `http://localhost:8001`).
+6. Log in met `Tebbensj` / `Proefmei2026!`.
+7. Stoppen doe je met **Ctrl+C** in dezelfde terminal.
+
+Handmatige opstart (PowerShell op Windows)
+-----------------------------------------
+1. **Virtuele omgeving (aanbevolen)**
+   ```powershell
+   py -3 -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   ```
+   > Gebruik `python` in plaats van `py -3` als je geen Python-launcher hebt.
+2. **Packages installeren**
+   ```powershell
+   pip install --upgrade pip
+   pip install -r backend\requirements.txt
+   ```
+3. **Backend starten**
+   ```powershell
+   Set-Location backend
+   $env:BACKEND_HOST = '127.0.0.1'
+   $env:BACKEND_PORT = '5000'
+   python app.py
+   ```
+   Bij de eerste start wordt automatisch een lokale SQLite-database (`backend\proefmei.db`)
+   aangemaakt met voorbeelddata en een admin-gebruiker.
+4. **Frontend serveren** (nieuw PowerShell-venster):
+   ```powershell
+   Set-Location frontend
+   python -m http.server 8001 --bind 127.0.0.1
+   ```
+5. **Inloggen**
+   Gebruik opnieuw `Tebbensj` / `Proefmei2026!` om de applicatie te verkennen.
+
+Handmatige opstart (macOS/Linux)
+--------------------------------
+1. **Virtuele omgeving (optioneel maar aanbevolen)**
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+2. **Packages installeren**
+   ```bash
+   pip install --upgrade pip
+   pip install -r backend/requirements.txt
+   ```
+3. **Backend starten**
+   ```bash
+   cd backend
+   BACKEND_HOST=0.0.0.0 BACKEND_PORT=5000 python app.py
+   ```
+   De API draait nu op `http://<host>:<poort>`. Bij de eerste start wordt automatisch een lokale
+   SQLite-database (`backend/proefmei.db`) aangemaakt met voorbeelddata en een admin-gebruiker.
+4. **Frontend serveren** (nieuw terminalvenster):
+   ```bash
+   cd frontend
+   python -m http.server 8001 --bind 0.0.0.0
+   ```
+   De webinterface is bereikbaar op `http://<host>:<frontend-poort>`.
+5. **Inloggen**
+   Gebruik opnieuw `Tebbensj` / `Proefmei2026!`.
+
+> **Tip**: pas de waarden voor `BACKEND_HOST`, `BACKEND_PORT` en de parameters van `http.server`
+> aan wanneer je andere poorten wilt gebruiken of alleen op een specifieke interface wilt luisteren.
+
+Troubleshooting
+---------------
+- **Poort al in gebruik**: wijzig het poortnummer in `start_local.sh` of de handmatige commando's.
+- **Database resetten**: verwijder `backend/proefmei.db` terwijl de backend is gestopt en start
+  daarna opnieuw.
+- **NFC-hardware niet beschikbaar**: de backend schakelt automatisch over op simulatiemodus; je
+  kunt nog steeds transacties testen via de UI.
+- **"Running scripts is disabled"-melding**: voer het script vanuit PowerShell uit nadat je
+  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` hebt toegepast, of start `start_windows.bat`
+  zodat PowerShell tijdelijk in bypass-modus wordt geopend.
+- **MySQL i.p.v. SQLite**: vul de gewenste instellingen in via omgevingsvariabelen (`DB_BACKEND`,
+  `DB_HOST`, enz.) voordat je het script draait. Zie `backend/README_BACKEND.txt` voor details.
+
+Extern gebruik (meerdere computers)
+-----------------------------------
+1. **Server voorbereiden**
+   - Voer de stappen uit dit document op de computer die de rol van server krijgt. Dat kan Windows
+     (PowerShell), macOS, Linux of Windows met WSL2 zijn.
+   - Noteer het (interne) IP-adres van de server, bijvoorbeeld via `ip addr` (Linux/macOS) of
+     `ipconfig` (Windows/PowerShell).
+   - Sta inkomende verbindingen toe op de backend- en frontend-poorten in de lokale firewall.
+   - Wanneer je clients buiten het lokale netwerk verwacht, open dezelfde poorten op je router of
+     cloud-security-groep.
+2. **Script configureren**
+   - Gebruik desgewenst omgevingsvariabelen om host en poorten in te stellen:
+     ```powershell
+     $env:BACKEND_HOST = '0.0.0.0'
+     $env:FRONTEND_PORT = '8080'
+     ./start_windows.ps1
+     ```
+     of
+     ```bash
+     BACKEND_HOST=0.0.0.0 FRONTEND_PORT=8080 ./start_local.sh
+     ```
+   - `0.0.0.0` zorgt ervoor dat beide processen op alle netwerkinterfaces luisteren.
+   - Kies alternatieve poorten als 5000 of 8001 al in gebruik zijn of niet door de firewall mogen.
+3. **Clients verbinden**
+   - Andere computers in hetzelfde netwerk openen `http://<server-ip>:<frontend-poort>` in de
+     browser. Bijvoorbeeld `http://192.168.1.20:8001`.
+   - De frontend maakt automatisch API-aanroepen naar dezelfde host, waardoor extra configuratie
+     niet nodig is zolang backend en frontend op één server draaien.
+4. **Beveiliging**
+   - Dit script is bedoeld voor vertrouwde netwerken. Voeg voor productiegebruik een reverse proxy,
+     HTTPS-certificaten en eventueel netwerk-authenticatie toe voordat je het systeem publiek maakt.
+
+Veel succes met het draaien van HardCups, zowel lokaal als extern!
