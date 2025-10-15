@@ -2,7 +2,7 @@ import os
 import random
 from datetime import datetime, date, timedelta, timezone
 from functools import wraps
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, request, send_file, after_this_request
 from flask_cors import CORS
 from sqlalchemy import (
     create_engine,
@@ -759,7 +759,16 @@ def invoice_daily():
                        Transaction.created_at <= end_dt)
                .order_by(Transaction.created_at.asc()).all())
         pdf_path = build_invoice_pdf(cust, txs, invoice_type="Dagafrekening", target_date=target_date)
-        return send_file(pdf_path, mimetype="application/pdf", as_attachment=True,
+
+        @after_this_request
+        def cleanup(response):
+            try:
+                os.remove(pdf_path)
+            except OSError:
+                pass
+            return response
+
+        return send_file(str(pdf_path), mimetype="application/pdf", as_attachment=True,
                          download_name=f"Dagafrekening_{cust.number}_{target_date}.pdf")
     finally:
         s.close()
@@ -778,7 +787,16 @@ def invoice_final():
                .filter(Transaction.customer_id == cust.id)
                .order_by(Transaction.created_at.asc()).all())
         pdf_path = build_invoice_pdf(cust, txs, invoice_type="Eindafrekening", target_date=date.today())
-        return send_file(pdf_path, mimetype="application/pdf", as_attachment=True,
+
+        @after_this_request
+        def cleanup(response):
+            try:
+                os.remove(pdf_path)
+            except OSError:
+                pass
+            return response
+
+        return send_file(str(pdf_path), mimetype="application/pdf", as_attachment=True,
                          download_name=f"Eindafrekening_{cust.number}.pdf")
     finally:
         s.close()
