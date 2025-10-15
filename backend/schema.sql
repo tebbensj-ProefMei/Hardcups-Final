@@ -33,5 +33,15 @@ CREATE TABLE IF NOT EXISTS users (
   username VARCHAR(64) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role ENUM('admin','medewerker','klant') NOT NULL DEFAULT 'medewerker',
-  customer_id INT NULL
+  customer_id INT NULL,
+  allowed_dashboards VARCHAR(255) NOT NULL DEFAULT 'dashboard'
+);
+
+CREATE TABLE IF NOT EXISTS coin_transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  customer_id INT NOT NULL,
+  amount INT NOT NULL,
+  recorded_by VARCHAR(64),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_coin_customer FOREIGN KEY (customer_id) REFERENCES customers(id)
 );
