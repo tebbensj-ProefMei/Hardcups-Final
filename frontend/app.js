@@ -405,11 +405,13 @@ function extractFilename(res, fallback) {
 
 async function downloadFile(url, fallbackName, options = {}) {
   try {
-    const res = await fetch(url, {
-      method: "GET",
-      ...options,
-      headers: { ...authHeaders(), ...(options.headers || {}) },
-    });
+    const fetchOptions = { method: "GET", ...options };
+    fetchOptions.headers = {
+      ...authHeaders(),
+      ...(options.headers || {}),
+    };
+
+    const res = await fetch(url, fetchOptions);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || "Download mislukt");
@@ -434,10 +436,12 @@ function downloadDagAfrekening() {
     return alert("Selecteer eerst een klant.");
   }
   const today = new Date().toISOString().slice(0, 10);
-  const url = `${API}/invoices/daily?customer=${encodeURIComponent(
-    customer
-  )}&date=${today}`;
-  downloadFile(url, `Dagafrekening_${customer}_${today}.pdf`, { method: "POST" });
+  const body = JSON.stringify({ customer, date: today });
+  downloadFile(`${API}/invoices/daily`, `Dagafrekening_${customer}_${today}.pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
 }
 
 function downloadEindAfrekening() {
@@ -445,8 +449,12 @@ function downloadEindAfrekening() {
   if (!customer) {
     return alert("Selecteer eerst een klant.");
   }
-  const url = `${API}/invoices/final?customer=${encodeURIComponent(customer)}`;
-  downloadFile(url, `Eindafrekening_${customer}.pdf`, { method: "POST" });
+  const body = JSON.stringify({ customer });
+  downloadFile(`${API}/invoices/final`, `Eindafrekening_${customer}.pdf`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
 }
 
 function downloadTxCSV() {
