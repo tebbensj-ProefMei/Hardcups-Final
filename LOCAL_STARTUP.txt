@@ -14,6 +14,8 @@ Nieuwe functionaliteiten (Q4 2025)
   per gebruiker aanvinken tot welke dashboards hij/zij toegang heeft.
 - Voorraadniveaus kunnen direct worden overschreven en muntenintake wordt
   gekoppeld aan klanten zonder de factuurlogica te beïnvloeden.
+- In het menu **Instellingen** stel je per apparaat het API-adres in; standaard
+  wijst dit naar de lokale backend (`http://localhost:5000/api`).
 
 Voorwaarden
 -----------

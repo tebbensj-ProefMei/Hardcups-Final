@@ -312,6 +312,23 @@
         <section id="instellingen" class="card" aria-label="Instellingen">
           <h2>Instellingen</h2>
           <p class="muted">Autorisatie ingeschakeld. Alleen accounts met de juiste rechten kunnen onderdelen wijzigen.</p>
+          <form id="settingsForm" class="form-grid" aria-label="Website-instellingen">
+            <div>
+              <label for="apiBase">API-adres</label>
+              <input
+                type="url"
+                id="apiBase"
+                name="apiBase"
+                placeholder="http://localhost:5000/api"
+                required
+              />
+              <small class="muted">Gebruik je lokale of externe backend. Wijzigingen gelden per apparaat.</small>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary">Opslaan</button>
+              <button type="button" id="resetSettingsBtn">Terug naar lokaal</button>
+            </div>
+          </form>
         </section>
       </main>
     </div>

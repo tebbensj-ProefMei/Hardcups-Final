@@ -1,4 +1,4 @@
-const API = "http://localhost:5000/api";
+let API = "http://localhost:5000/api";
 const DASHBOARD_LABELS = {
   dashboard: "Dashboard",
   klanten: "Klanten",
@@ -17,6 +17,85 @@ let ROLE = null;
 let ALLOWED_DASHBOARDS = [];
 let customersCache = [];
 let cupChart = null;
+
+const SETTINGS_STORAGE_KEY = "hardcupsSettings";
+const DEFAULT_SETTINGS = {
+  apiBase: "http://localhost:5000/api",
+};
+let SETTINGS = { ...DEFAULT_SETTINGS };
+
+loadSettingsFromStorage();
+applySettings();
+
+function loadSettingsFromStorage() {
+  try {
+    const stored = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!stored) return;
+    const parsed = JSON.parse(stored);
+    if (parsed && typeof parsed === "object") {
+      SETTINGS = { ...DEFAULT_SETTINGS, ...parsed };
+    }
+  } catch (err) {
+    console.warn("Kon lokale instellingen niet laden", err);
+    SETTINGS = { ...DEFAULT_SETTINGS };
+  }
+}
+
+function persistSettings() {
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(SETTINGS));
+  } catch (err) {
+    console.warn("Kon lokale instellingen niet opslaan", err);
+  }
+}
+
+function applySettings() {
+  let base = SETTINGS.apiBase || DEFAULT_SETTINGS.apiBase;
+  if (typeof base === "string") {
+    base = base.trim();
+    if (!base) {
+      base = DEFAULT_SETTINGS.apiBase;
+    }
+    base = base.replace(/\/+$/, "");
+  } else {
+    base = DEFAULT_SETTINGS.apiBase;
+  }
+  API = base;
+  SETTINGS.apiBase = base;
+  const apiInput = document.getElementById("apiBase");
+  if (apiInput) {
+    apiInput.value = API;
+  }
+}
+
+function resetSettingsToDefault() {
+  SETTINGS = { ...DEFAULT_SETTINGS };
+  applySettings();
+  persistSettings();
+  if (TOKEN) {
+    alert("Instellingen zijn teruggezet. Log opnieuw in om door te gaan.");
+    logout();
+  }
+}
+
+function handleSettingsSubmit(event) {
+  event.preventDefault();
+  const apiInput = document.getElementById("apiBase");
+  if (!apiInput) return;
+  const value = apiInput.value.trim();
+  if (!value) {
+    return alert("Vul een API-adres in.");
+  }
+  SETTINGS.apiBase = value;
+  applySettings();
+  persistSettings();
+  if (TOKEN) {
+    alert("API-adres bijgewerkt. Log opnieuw in om de wijziging toe te passen.");
+    logout();
+  } else {
+    alert("Instellingen opgeslagen.");
+  }
+}
 
 const authHeaders = () => (TOKEN ? { Authorization: `Bearer ${TOKEN}` } : {});
 
@@ -38,6 +117,9 @@ function resolveAllowedFromResponse(list) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  loadSettingsFromStorage();
+  applySettings();
+
   renderDashboardOptions();
 
   document.getElementById("loginForm").addEventListener("submit", doLogin);
@@ -84,6 +166,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("accountForm").addEventListener("submit", saveAccount);
   document.getElementById("accountResetBtn").addEventListener("click", resetAccountForm);
+
+  const settingsForm = document.getElementById("settingsForm");
+  if (settingsForm) {
+    settingsForm.addEventListener("submit", handleSettingsSubmit);
+  }
+  const resetSettingsBtn = document.getElementById("resetSettingsBtn");
+  if (resetSettingsBtn) {
+    resetSettingsBtn.addEventListener("click", (event) => {
+      event.preventDefault();
+      resetSettingsToDefault();
+    });
+  }
 });
 
 async function doLogin(event) {
