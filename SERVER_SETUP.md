@@ -14,8 +14,8 @@ Uitgangspunten
   met een eigen virtuele omgeving start.
 - Python 3.10 of hoger en `pip` zijn beschikbaar (controleer met `python3 --version`
   en `pip3 --version`).
-- MySQL-gegevens (host, databasenaam, gebruikersnaam, wachtwoord) krijg je van je
-  hostingprovider of maak je zelf aan via het controlepaneel.
+- De hostingprovider levert een **MySQL 8**-instantie (of je maakt er zelf een aan)
+  inclusief hostnaam, databasenaam, gebruikersnaam en wachtwoord.
 
 **Benodigde schijfruimte**
 
@@ -61,23 +61,30 @@ Voorbereiding hostingomgeving
 MySQL-database koppelen
 -----------------------
 1. Maak in het controlepaneel een database en gebruiker aan, of noteer de gegevens
-   van een bestaande database. Typisch krijg je iets als:
+   van een bestaande database op **MySQL 8.x**. Typisch krijg je iets als:
    - **Host**: `mysql.<provider>.nl` of `localhost`
    - **Poort**: `3306`
    - **Database**: `u123456_hardcups`
    - **Gebruiker**: `u123456_hardcups`
    - **Wachtwoord**: door jou ingesteld
-2. Test de connectie via de shell (optioneel):
+2. Controleer dat de database op MySQL 8 draait en test de connectie via de shell (optioneel):
    ```bash
    mysql -h <db-host> -u <db-gebruiker> -p<db-wachtwoord> <db-naam>
    ```
+   ```sql
+   SELECT VERSION(); -- verwacht 8.x.y
+   ```
    > Sommige hosts vereisen een spatie tussen `-p` en het wachtwoord. Volg hun
    > handleiding als bovenstaande niet werkt.
+   > Meld het bij de provider als je MySQL 5.x terugkrijgt; PyMySQL is afgestemd op
+   > MySQL 8 en gebruikt standaard het `caching_sha2_password`-mechanisme van die versie.
 3. De HardCups-backend maakt de tabellen automatisch bij de eerste start. Wil je een
    schone structuur forceren, voer dan (met jouw waarden) uit:
    ```bash
    mysql -h <db-host> -u <db-gebruiker> -p<db-wachtwoord> <db-naam> < backend/schema.sql
    ```
+   > De tabellen worden aangemaakt met `utf8mb4`-codering, zodat emoji en speciale
+   > tekens correct opgeslagen worden in MySQL 8.
 
 Configuratie (.env)
 -------------------
