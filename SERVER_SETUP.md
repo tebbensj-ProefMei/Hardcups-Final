@@ -1,23 +1,4 @@
 HardCups serverhandleiding (Linux VPS/dedicated + MySQL 8)
-=========================================================
-
-Overzicht
----------
-Deze gids beschrijft hoe je HardCups installeert op een **eigen Linux-server**
-(bijvoorbeeld een VPS of dedicated server bij Strato of Hetzner) met een
-externe of lokale **MySQL 8**-database. De stappen zijn afgestemd op Ubuntu
-22.04 LTS of Debian 12, maar werken met kleine aanpassingen ook op andere
-moderne distributies.
-
-Belangrijkste uitgangspunten
-----------------------------
-- Je hebt root- of sudo-toegang tot de server.
-- De server draait Linux (bijv. Ubuntu 22.04 LTS of Debian 12).
-- Python 3.10+ en `pip` zijn beschikbaar of kunnen worden geïnstalleerd via het
-  pakketbeheer.
-- Je beschikt over een MySQL 8-database (managed bij de provider of lokaal op de
-  server geïnstalleerd) en kent de hostnaam, databasenaam, gebruiker en
-  wachtwoord.
 
 **Benodigde schijfruimte**
 
