@@ -10,6 +10,14 @@ configuratie, starten en beheer.
 
 Voorbereiding server
 --------------------
+**Benodigde schijfruimte**
+
+- Repository + configuratiebestanden: ±1 MB.
+- Python-virtualenv (incl. dependencies zoals Flask, SQLAlchemy, ReportLab en NFCpy): reken op 400–500 MB na installatie.
+- MySQL-server + database: Starto installeert ~1,2 GB voor de server zelf; reserveer minimaal 1 GB extra voor data en back-ups.
+
+> **Totaaladvies**: neem minstens 3 GB vrije schijfruimte op de VPS zodat je voldoende marge hebt voor logbestanden, toekomstige updates en databasegroei.
+
 1. **Inloggen op de VPS**
    ```bash
    ssh <gebruiker>@<vps-ip>
