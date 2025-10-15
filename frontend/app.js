@@ -392,29 +392,71 @@ async function registreerInname() {
   }
 }
 
+function extractFilename(res, fallback) {
+  const disposition = res.headers.get("Content-Disposition");
+  if (disposition) {
+    const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+    if (match) {
+      return decodeURIComponent(match[1] || match[2]);
+    }
+  }
+  return fallback;
+}
+
+async function downloadFile(url, fallbackName, options = {}) {
+  try {
+    const res = await fetch(url, {
+      method: "GET",
+      ...options,
+      headers: { ...authHeaders(), ...(options.headers || {}) },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || "Download mislukt");
+    }
+    const blob = await res.blob();
+    const filename = extractFilename(res, fallbackName);
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
 function downloadDagAfrekening() {
   const customer = document.getElementById("factuurKlant").value;
+  if (!customer) {
+    return alert("Selecteer eerst een klant.");
+  }
   const today = new Date().toISOString().slice(0, 10);
   const url = `${API}/invoices/daily?customer=${encodeURIComponent(
     customer
   )}&date=${today}`;
-  window.open(url, "_blank");
+  downloadFile(url, `Dagafrekening_${customer}_${today}.pdf`, { method: "POST" });
 }
 
 function downloadEindAfrekening() {
   const customer = document.getElementById("factuurKlant").value;
+  if (!customer) {
+    return alert("Selecteer eerst een klant.");
+  }
   const url = `${API}/invoices/final?customer=${encodeURIComponent(customer)}`;
-  window.open(url, "_blank");
+  downloadFile(url, `Eindafrekening_${customer}.pdf`, { method: "POST" });
 }
 
 function downloadTxCSV() {
   const url = `${API}/export/transactions.csv`;
-  window.open(url, "_blank");
+  downloadFile(url, "transacties.csv");
 }
 
 function downloadInvCSV() {
   const url = `${API}/export/inventory.csv`;
-  window.open(url, "_blank");
+  downloadFile(url, "voorraad.csv");
 }
 
 function resetCustomerDetails() {
