@@ -7,6 +7,8 @@ from reportlab.lib.units import mm
 from datetime import datetime
 import random, os
 
+from path_utils import ensure_output_dir
+
 PRIMARY = colors.HexColor("#002b5b")
 LIGHT_BG = colors.HexColor("#f7f9fc")
 TEXT = colors.black
@@ -135,8 +137,9 @@ def build_invoice_pdf(customer, transactions, invoice_type="Afrekening", target_
     inv_no=f"{datetime.now().strftime('%Y%m')}-{customer.number}-{random.randint(1000,9999)}"
     title=f"ProefMei — Pro Forma Factuur ({invoice_type})"
     print_date=(target_date.strftime('%d-%m-%Y') if target_date else datetime.now().strftime('%d-%m-%Y'))
-    filename=f"/mnt/data/ProForma_{customer.number}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-    doc=SimpleDocTemplate(filename,pagesize=A4,leftMargin=18*mm,rightMargin=18*mm,topMargin=16*mm,bottomMargin=16*mm)
+    output_dir = ensure_output_dir()
+    filename = output_dir / f"ProForma_{customer.number}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+    doc=SimpleDocTemplate(str(filename),pagesize=A4,leftMargin=18*mm,rightMargin=18*mm,topMargin=16*mm,bottomMargin=16*mm)
 
     story=[]
     logo_note = "Zorg dat frontend/logo.jpeg bestaat voor een logo bovenaan."
