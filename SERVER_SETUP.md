@@ -1,101 +1,139 @@
-HardCups productiehandleiding (Starto VPS + MySQL + Linux)
-=========================================================
+HardCups hostinghandleiding (Linux webhosting + MySQL)
+=====================================================
 
 Overzicht
 ---------
-Dit document beschrijft hoe je het HardCups-project uit deze repository in productie
-kunt draaien op een Starto VPS met een Linux-distributie (bijvoorbeeld Ubuntu 22.04)
-en een MySQL-database. De stappen zijn opgesplitst in voorbereiding, database,
-configuratie, starten en beheer.
+Dit document beschrijft hoe je het HardCups-project kunt draaien op een
+Linux-gebaseerde **webhostingomgeving** (shared of managed hosting) waar je via SSH
+toegang hebt en een MySQL-database kunt gebruiken. De stappen zijn opgesplitst in
+voorbereiding, database, configuratie, starten en beheer.
 
-Voorbereiding server
---------------------
+Uitgangspunten
+--------------
+- Je hostingpakket biedt SSH-toegang en staat toe dat je zelf een Python-applicatie
+  met een eigen virtuele omgeving start.
+- Python 3.10 of hoger en `pip` zijn beschikbaar (controleer met `python3 --version`
+  en `pip3 --version`).
+- MySQL-gegevens (host, databasenaam, gebruikersnaam, wachtwoord) krijg je van je
+  hostingprovider of maak je zelf aan via het controlepaneel.
+
 **Benodigde schijfruimte**
 
 - Repository + configuratiebestanden: ±1 MB.
-- Python-virtualenv (incl. dependencies zoals Flask, SQLAlchemy, ReportLab en NFCpy): reken op 400–500 MB na installatie.
-- MySQL-server + database: Starto installeert ~1,2 GB voor de server zelf; reserveer minimaal 1 GB extra voor data en back-ups.
+- Python-virtualenv (incl. dependencies zoals Flask, SQLAlchemy, ReportLab en NFCpy):
+  reken op 400–500 MB na installatie.
+- MySQL-database: reserveer minstens 1 GB voor data en back-ups (of volg het advies
+  van je hostingprovider).
 
-> **Totaaladvies**: neem minstens 3 GB vrije schijfruimte op de VPS zodat je voldoende marge hebt voor logbestanden, toekomstige updates en databasegroei.
+> **Totaaladvies**: zorg voor minimaal 3 GB vrije ruimte in je webhostingpakket, zo
+> heb je marge voor logbestanden en toekomstige groei.
 
-1. **Inloggen op de VPS**
+Voorbereiding hostingomgeving
+-----------------------------
+1. **Verbind via SSH**
    ```bash
-   ssh <gebruiker>@<vps-ip>
+   ssh <hosting-gebruiker>@<domein-of-ip>
    ```
-2. **Systeem updaten en vereiste pakketten installeren**
+2. **Kies een map in je home-directory**
    ```bash
-   sudo apt update
-   sudo apt install -y python3 python3-venv python3-pip git mysql-server
+   mkdir -p ~/apps
+   cd ~/apps
    ```
-   > Heb je al een MySQL-server elders draaien? Sla dan de installatie van
-   > `mysql-server` over en gebruik de externe server in de volgende stappen.
-3. **Repository ophalen**
+3. **Repository plaatsen**
+   - Optie A: klonen via Git
+     ```bash
+     git clone https://github.com/<jouw-account>/Hardcups-Final.git
+     cd Hardcups-Final
+     ```
+   - Optie B: upload een ZIP vanuit je lokale machine en pak deze uit:
+     ```bash
+     unzip Hardcups-Final.zip -d ~/apps
+     cd Hardcups-Final
+     ```
+4. **Controleer Python en pip**
    ```bash
-   git clone https://github.com/<jouw-account>/Hardcups-Final.git
-   cd Hardcups-Final
+   python3 --version
+   pip3 --version
    ```
+   > Werkt dit niet? Raadpleeg de documentatie van je hostingprovider hoe je Python
+   > activeert (sommige pakketten vereisen `python` in plaats van `python3`).
 
-MySQL-database klaarzetten
---------------------------
-1. Meld je aan op de MySQL-shell:
+MySQL-database koppelen
+-----------------------
+1. Maak in het controlepaneel een database en gebruiker aan, of noteer de gegevens
+   van een bestaande database. Typisch krijg je iets als:
+   - **Host**: `mysql.<provider>.nl` of `localhost`
+   - **Poort**: `3306`
+   - **Database**: `u123456_hardcups`
+   - **Gebruiker**: `u123456_hardcups`
+   - **Wachtwoord**: door jou ingesteld
+2. Test de connectie via de shell (optioneel):
    ```bash
-   sudo mysql
+   mysql -h <db-host> -u <db-gebruiker> -p<db-wachtwoord> <db-naam>
    ```
-2. Maak een database en een aparte gebruiker aan:
-   ```sql
-   CREATE DATABASE proefmei CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'hardcups'@'localhost' IDENTIFIED BY 'sterkWachtwoord!';
-   GRANT ALL PRIVILEGES ON proefmei.* TO 'hardcups'@'localhost';
-   FLUSH PRIVILEGES;
-   EXIT;
+   > Sommige hosts vereisen een spatie tussen `-p` en het wachtwoord. Volg hun
+   > handleiding als bovenstaande niet werkt.
+3. De HardCups-backend maakt de tabellen automatisch bij de eerste start. Wil je een
+   schone structuur forceren, voer dan (met jouw waarden) uit:
+   ```bash
+   mysql -h <db-host> -u <db-gebruiker> -p<db-wachtwoord> <db-naam> < backend/schema.sql
    ```
-   > Kies uiteraard een eigen, sterk wachtwoord.
-3. De tabellen worden automatisch aangemaakt wanneer de backend voor het eerst start.
-   Wil je ze handmatig vullen of opnieuw initialiseren? Voer dan `backend/schema.sql`
-   uit met `mysql`.
 
 Configuratie (.env)
 -------------------
-1. Kopieer het voorbeeldbestand en vul de MySQL-gegevens in:
+1. Kopieer het voorbeeldbestand:
    ```bash
    cp backend/env.example backend/.env
    nano backend/.env
    ```
-2. Pas de volgende regels aan:
+2. Vul je hostinggegevens in:
    ```dotenv
    DB_BACKEND=mysql
-   DB_USER=hardcups
-   DB_PASS=sterkWachtwoord!
-   DB_HOST=127.0.0.1
+   DB_USER=u123456_hardcups
+   DB_PASS=<jouw_wachtwoord>
+   DB_HOST=mysql.<provider>.nl
    DB_PORT=3306
-   DB_NAME=proefmei
+   DB_NAME=u123456_hardcups
    JWT_SECRET=<kies_een_lang_random_geheim>
    ```
-   > Laat `DATABASE_URL` leeg tenzij je liever één complete connectiestring gebruikt.
-3. Bewaar het bestand. Het script `start_server.sh` leest deze waarden automatisch in.
+   > Laat `DATABASE_URL` leeg tenzij je liever één connectiestring gebruikt. Bewaar
+   > het bestand en sluit de editor.
+3. Optioneel: pas poorten aan als je hostingprovider specifieke poorten voor
+   applicaties voorschrijft (zie tabel verderop).
 
-Server starten
---------------
-Gebruik het meegeleverde opstartscript. Het script maakt (indien nodig) een
-virtuele omgeving, installeert Python-packages en start zowel de Flask-backend als
-het statische frontend.
+Applicatie starten
+------------------
+Gebruik het opstartscript. Het script maakt (indien nodig) een virtuele omgeving,
+installeert dependencies en start backend + statische frontend.
 
 ```bash
 chmod +x start_server.sh        # eenmalig nodig
 ./start_server.sh
 ```
 
-Bij de eerste run zie je meldingen zoals:
+Tijdens de eerste run zie je bijvoorbeeld:
 ```
-[setup] Creating Python virtual environment in /pad/naar/.venv
+[setup] Creating Python virtual environment in /home/<user>/apps/Hardcups-Final/.venv
 [setup] Installing/updating Python dependencies
 [setup] Loading environment variables from backend/.env
 [backend] Flask API gestart op http://0.0.0.0:5000 (PID ...)
 [frontend] Static server opgestart op http://0.0.0.0:8001 (PID ...)
 Services draaien. Druk op Enter om te stoppen...
 ```
-Laat het venster open staan zolang de diensten actief moeten blijven. Stoppen doe
-je door **Enter** te drukken (of `Ctrl+C`).
+
+Laat de sessie open zolang de app actief moet blijven. Wil je uitloggen maar de
+processen actief houden, gebruik dan een tool zoals `screen` of `tmux`, of start het
+script met `nohup`:
+
+```bash
+nohup ./start_server.sh >/home/<user>/logs/hardcups.log 2>&1 &
+```
+
+> **Let op:** bij sommige hostingpakketten worden processen die HTTP-poorten open
+> zetten na verloop van tijd automatisch gestopt. Controleer de voorwaarden van je
+> provider of gebruik hun aanbevolen applicatieplatform (bijvoorbeeld Passenger,
+> Gunicorn of een Python-app wizard) en laat dat platform naar `backend/app.py`
+> wijzen. De vereiste omgeving blijft hetzelfde.
 
 Handige variabelen
 ------------------
@@ -103,65 +141,42 @@ Je kunt gedrag van het script sturen met omgevingsvariabelen:
 
 | Variabele          | Standaard | Beschrijving                                                |
 |--------------------|-----------|-------------------------------------------------------------|
-| `BACKEND_HOST`     | `0.0.0.0` | Netwerkinterface waarop Flask luistert.                    |
-| `BACKEND_PORT`     | `5000`    | Poort voor de API.                                          |
-| `FRONTEND_HOST`    | `0.0.0.0` | Netwerkinterface voor de statische server.                 |
-| `FRONTEND_PORT`    | `8001`    | Poort voor de frontend.                                    |
-| `VENV_DIR`         | `.venv`   | Locatie van de virtuele Python-omgeving.                   |
-| `PYTHON_BIN`       | `python3` | Alternatieve Python-binary (bv. `/usr/bin/python3.11`).    |
-| `ENV_FILE`         | `backend/.env` | Pad naar het configuratiebestand.                    |
-| `SKIP_PIP_INSTALL` | `0`       | Zet op `1` wanneer packages reeds geïnstalleerd zijn.      |
+| `BACKEND_HOST`     | `0.0.0.0` | Interface waarop Flask luistert. Kies `127.0.0.1` als alleen interne toegang nodig is. |
+| `BACKEND_PORT`     | `5000`    | Poort voor de API. Pas aan als je provider een andere poort vereist. |
+| `FRONTEND_HOST`    | `0.0.0.0` | Interface voor de statische server.                         |
+| `FRONTEND_PORT`    | `8001`    | Poort voor de frontend.                                     |
+| `VENV_DIR`         | `.venv`   | Locatie van de virtuele Python-omgeving.                    |
+| `PYTHON_BIN`       | `python3` | Alternatieve Python-binary (bv. `/usr/local/bin/python3.11`). |
+| `ENV_FILE`         | `backend/.env` | Pad naar het configuratiebestand.                     |
+| `SKIP_PIP_INSTALL` | `0`       | Zet op `1` wanneer packages reeds geïnstalleerd zijn.       |
 
-Voorbeeld voor aangepaste poorten:
+Voorbeeld met aangepaste poorten:
 ```bash
 BACKEND_PORT=5050 FRONTEND_PORT=9000 ./start_server.sh
 ```
 
-Server automatisch laten draaien
---------------------------------
-Voor productie wil je de diensten waarschijnlijk als achtergrondproces of systemd
-service draaien. Een eenvoudig systemd-unitbestand (bijvoorbeeld `/etc/systemd/system/hardcups.service`):
-
-```ini
-[Unit]
-Description=HardCups Flask + Frontend
-After=network.target mysql.service
-
-[Service]
-Type=simple
-WorkingDirectory=/pad/naar/Hardcups-Final
-Environment="BACKEND_HOST=0.0.0.0"
-Environment="FRONTEND_HOST=0.0.0.0"
-ExecStart=/bin/bash -lc '/pad/naar/Hardcups-Final/start_server.sh'
-Restart=on-failure
-User=<jouw-gebruiker>
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Activeer de service:
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now hardcups.service
-```
-
-Logs bekijken:
-```bash
-journalctl -u hardcups.service -f
-```
+App laten doorlopen
+-------------------
+- **screen/tmux**: start `screen`, voer `./start_server.sh` uit en detach met
+  `Ctrl+A` → `D`. Herverbind later met `screen -r`.
+- **nohup**: zoals hierboven getoond, zodat het proces actief blijft na uitloggen.
+- **Cron @reboot**: sommige hosts bieden een "scheduled task" of "cron job" die je
+  bij elke herstart kunt laten uitvoeren:
+  ```
+  @reboot /bin/bash -lc 'cd ~/apps/Hardcups-Final && ./start_server.sh'
+  ```
+  Controleer of je hostingprovider `@reboot` ondersteunt.
 
 Extra tips
 ----------
-- **Firewall**: open poorten 5000 (API) en 8001 (frontend) of stel een reverse proxy
-  (bijvoorbeeld Nginx) in die naar deze poorten doorstuurt.
-- **SSL/HTTPS**: zet bijvoorbeeld Caddy of Nginx + Certbot voor de applicatie voor
-  een versleutelde verbinding.
-- **Database back-ups**: gebruik `mysqldump` of een beheertool om regelmatig backups
-  te maken.
+- **Domeinkoppeling**: gebruik een reverse proxy of de applicatie-configuratie van je
+  host om verkeer naar de poort van de backend of de statische frontend te sturen.
+- **SSL/HTTPS**: veel providers bieden Let's Encrypt-integratie. Richt je domein naar
+  de proxy/poorten van de app om HTTPS te activeren.
+- **Database back-ups**: maak regelmatig exports via phpMyAdmin of `mysqldump`.
 - **Admin-login**: standaardgebruiker `Tebbensj` met wachtwoord `Proefmei2026!`.
-  Wijzig het wachtwoord via de database of voeg een eigen admin toe voor productie.
-- **Environment updates**: voer `git pull` uit om nieuwe versies binnen te halen en
-  start de service opnieuw (`systemctl restart hardcups.service`).
+  Wijzig dit in de database of voeg een eigen admin toe voordat je live gaat.
+- **Updates**: haal nieuwe versies binnen met `git pull` (of upload opnieuw) en
+  herstart daarna de applicatie.
 
-Veel succes met het draaien van HardCups op je Starto VPS!
+Veel succes met het hosten van HardCups op je webhostingpakket!
