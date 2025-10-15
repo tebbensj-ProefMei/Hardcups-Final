@@ -357,8 +357,9 @@ def nfc_read():
 def invoice_daily():
     s = SessionLocal()
     try:
-        customer_identifier = request.args.get("customer")
-        target_date_str = request.args.get("date")
+        payload = request.get_json(silent=True) or {}
+        customer_identifier = request.args.get("customer") or payload.get("customer")
+        target_date_str = request.args.get("date") or payload.get("date")
         cust = get_customer_by_identifier(s, customer_identifier)
         if not cust:
             return jsonify({"error": "Customer not found"}), 404
@@ -381,7 +382,8 @@ def invoice_daily():
 def invoice_final():
     s = SessionLocal()
     try:
-        customer_identifier = request.args.get("customer")
+        payload = request.get_json(silent=True) or {}
+        customer_identifier = request.args.get("customer") or payload.get("customer")
         cust = get_customer_by_identifier(s, customer_identifier)
         if not cust:
             return jsonify({"error": "Customer not found"}), 404
