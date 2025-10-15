@@ -111,7 +111,10 @@ Configuratie (.env)
 Applicatie starten
 ------------------
 Gebruik het opstartscript. Het script maakt (indien nodig) een virtuele omgeving,
-installeert dependencies en start backend + statische frontend.
+installeert dependencies en start backend + statische frontend. Het script zoekt
+automatisch naar `python3` of, als die ontbreekt, naar `python`. Heeft jouw host
+een eigen pad (bijvoorbeeld `/opt/alt/python3.11/bin/python3`), zet dan
+`PYTHON_BIN` voordat je het script draait.
 
 ```bash
 chmod +x start_server.sh        # eenmalig nodig
@@ -153,14 +156,45 @@ Je kunt gedrag van het script sturen met omgevingsvariabelen:
 | `FRONTEND_HOST`    | `0.0.0.0` | Interface voor de statische server.                         |
 | `FRONTEND_PORT`    | `8001`    | Poort voor de frontend.                                     |
 | `VENV_DIR`         | `.venv`   | Locatie van de virtuele Python-omgeving.                    |
-| `PYTHON_BIN`       | `python3` | Alternatieve Python-binary (bv. `/usr/local/bin/python3.11`). |
+| `PYTHON_BIN`       | auto      | Overschrijft de autodetectie van `python3`/`python`.        |
 | `ENV_FILE`         | `backend/.env` | Pad naar het configuratiebestand.                     |
 | `SKIP_PIP_INSTALL` | `0`       | Zet op `1` wanneer packages reeds geïnstalleerd zijn.       |
+| `START_FRONTEND`   | `1`       | Zet op `0` wanneer je frontend-bestanden via de hosting wil serveren. |
 
 Voorbeeld met aangepaste poorten:
 ```bash
 BACKEND_PORT=5050 FRONTEND_PORT=9000 ./start_server.sh
 ```
+
+Frontend door hosting laten serveren
+------------------------------------
+Veel hostingpakketten hebben al een statische webserver (Apache/Nginx). Laat je
+liever die server de frontend-bestanden tonen, doe dan het volgende:
+
+1. Synchroniseer de inhoud van `frontend/` naar de public_html/www-map van je host.
+2. Start alleen de backend:
+   ```bash
+   START_FRONTEND=0 ./start_server.sh
+   ```
+   De backend draait nog steeds op `BACKEND_HOST:BACKEND_PORT`, maar er wordt geen
+   lokale `http.server` meer gestart.
+3. Configureer een proxy- of rewrite-regel (bv. via `.htaccess`, Passenger of een
+   "Python app"-wizard) zodat API-verzoeken naar de backend-poort worden gestuurd.
+
+### Voorbeeld Passenger-configuratie
+
+Bij hosts die Passenger ondersteunen kun je in de map `backend/` een bestand
+`passenger_wsgi.py` plaatsen met:
+
+```python
+import os
+from app import app as application
+
+os.environ.setdefault("PYTHONPATH", os.path.dirname(__file__))
+```
+
+Zorg dat Passenger de virtuele omgeving gebruikt (vaak via `PassengerPython` in
+`.htaccess`) en verwijs naar dezelfde `.env`-configuratie.
 
 App laten doorlopen
 -------------------

@@ -5,7 +5,21 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
 VENV_DIR="${VENV_DIR:-$PROJECT_ROOT/.venv}"
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+# Detect an available Python interpreter when the caller didn't specify one.
+if [ -z "${PYTHON_BIN:-}" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+        PYTHON_BIN="python3"
+    elif command -v python >/dev/null 2>&1; then
+        PYTHON_BIN="python"
+    else
+        echo "[error] Geen python-interpreter gevonden. Zet PYTHON_BIN of zorg dat python3/python in PATH staat." >&2
+        exit 1
+    fi
+fi
+
+START_FRONTEND="${START_FRONTEND:-1}"
+
+FRONT_PID=""
 ENV_FILE="${ENV_FILE:-$PROJECT_ROOT/backend/.env}"
 BACKEND_HOST="${BACKEND_HOST:-0.0.0.0}"
 BACKEND_PORT="${BACKEND_PORT:-5000}"
@@ -61,17 +75,27 @@ python app.py &
 BACK_PID=$!
 echo "[backend] Flask API gestart op http://$BACKEND_HOST:$BACKEND_PORT (PID $BACK_PID)"
 
-cd "$PROJECT_ROOT/frontend"
-python -m http.server "$FRONTEND_PORT" --bind "$FRONTEND_HOST" &
-FRONT_PID=$!
-echo "[frontend] Static server opgestart op http://$FRONTEND_HOST:$FRONTEND_PORT (PID $FRONT_PID)"
+if [ "$START_FRONTEND" = "1" ]; then
+    cd "$PROJECT_ROOT/frontend"
+    python -m http.server "$FRONTEND_PORT" --bind "$FRONTEND_HOST" &
+    FRONT_PID=$!
+    echo "[frontend] Static server opgestart op http://$FRONTEND_HOST:$FRONTEND_PORT (PID $FRONT_PID)"
+else
+    echo "[frontend] START_FRONTEND!=1, frontend-server wordt overgeslagen."
+fi
 
 echo
 if [ -t 0 ]; then
     echo "[info] Services draaien. Druk op Enter om te stoppen..."
     (
-        if ! wait -n "$BACK_PID" "$FRONT_PID"; then
-            echo "[warn] Een van de processen is onverwacht gestopt."
+        if [ "$START_FRONTEND" = "1" ]; then
+            if ! wait -n "$BACK_PID" "$FRONT_PID"; then
+                echo "[warn] Een van de processen is onverwacht gestopt."
+            fi
+        else
+            if ! wait "$BACK_PID"; then
+                echo "[warn] Backend-proces is onverwacht gestopt."
+            fi
         fi
     ) &
     WAITER_PID=$!
@@ -79,5 +103,9 @@ if [ -t 0 ]; then
     kill "$WAITER_PID" 2>/dev/null || true
 else
     echo "[info] Geen interactieve terminal gedetecteerd; wacht tot een proces stopt."
-    wait -n "$BACK_PID" "$FRONT_PID"
+    if [ "$START_FRONTEND" = "1" ]; then
+        wait -n "$BACK_PID" "$FRONT_PID"
+    else
+        wait "$BACK_PID"
+    fi
 fi
