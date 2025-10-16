@@ -299,3 +299,214 @@ Troubleshooting en beheer
 
 Met deze stappen draait HardCups stabiel op een Linux-server bij Strato, Hetzner
 of een vergelijkbare provider met MySQL 8. Veel succes met de installatie!
+
+Strato Webhosting (Basic) – gedeelde hosting stappenplan
+--------------------------------------------------------
+Gebruik je Strato Webhosting (Basic) in plaats van een eigen VPS, houd dan
+rekening met een paar belangrijke verschillen:
+
+- Je deelt CPU/geheugen met andere klanten. Processen die te veel geheugen of
+  runtime nemen, worden automatisch gestopt. Optimaliseer daarom rapporten en
+  import-/exporttaken en plan zware bulkacties buiten piekmomenten.
+- Je kunt geen langdurige achtergrondprocessen draaien; de backend moet via het
+  door Strato geleverde **Passenger/FCGI-platform** worden gestart.
+- Alle bestanden staan in het webspace-pad (`/home/strato/www/<contract-id>/`).
+  Gebruik bij voorkeur SFTP/SSH om bestanden te uploaden in plaats van alleen
+  de web-FTP.
+- Strato levert standaard MySQL 5.7/8.0. Controleer in het klantenpaneel welke
+  versie actief is. Voor HardCups is minimaal MySQL 8 gewenst; vraag anders een
+  upgrade aan via het klantenportaal.
+
+### 1. Voorbereiding in het Strato klantenpaneel
+
+1. Log in op `https://login.strato.de` en kies jouw hostingcontract.
+2. Ga naar **Databases & Webspace → SSH-toegang** en activeer (indien mogelijk)
+   SSH. Noteer de gebruikersnaam (meestal `ssh-<contract-id>`), hostnaam en
+   poort.
+3. Maak onder **Databases & Webspace → Databases** een nieuwe MySQL-database aan
+   en noteer host, databasenaam, gebruikersnaam en wachtwoord.
+4. (Optioneel) maak een subdomein aan, bijvoorbeeld `app.jouwdomein.nl`, en
+   koppel deze later aan de map waar de frontendbestanden komen te staan.
+
+### 2. Verbinden met de hostingomgeving
+
+```bash
+ssh ssh-<contract-id>@ssh.strato.de
+# of gebruik SFTP voor bestandsoverdracht
+```
+
+Op Strato ziet de mappenstructuur er doorgaans zo uit:
+
+```
+~/
+ ├── httpdocs/           # Publieke webroot
+ ├── log/
+ ├── tmp/
+ └── python-apps/       # Aan te maken map voor Passenger-projecten
+```
+
+Maak alvast de werkmappen aan:
+
+```bash
+mkdir -p ~/python-apps/hardcups
+mkdir -p ~/httpdocs/app/api
+```
+
+### 3. Backend uitrollen met Passenger
+
+1. **Bestanden uploaden**
+
+   - Upload de map `backend/` en het script `start_server.sh` naar
+     `~/python-apps/hardcups/`. Je kunt `git` gebruiken (`git clone` in de
+     hostingomgeving) of lokaal een ZIP maken en uitpakken met `unzip`.
+   - Plaats ook de bestanden `backend/requirements.txt`, `backend/schema.sql`
+     en `backend/env.example`.
+
+2. **Virtualenv maken**
+
+   ```bash
+   cd ~/python-apps/hardcups/backend
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install --upgrade pip
+   pip install -r requirements.txt
+   deactivate
+   ```
+
+   > Strato heeft meerdere Python-versies; controleer met `python3 -V` welke
+   > versie beschikbaar is. Gebruik `python3.9` of hoger indien aanwezig.
+
+3. **Omgevingsvariabelen instellen**
+
+   Maak `~/python-apps/hardcups/backend/.env` en vul de waarden vergelijkbaar met
+   het VPS-scenario in. Omdat Passenger het bestand niet automatisch leest, voeg
+   je in de WSGI-wrapper (zie stap 4) een loader toe:
+
+   ```dotenv
+   DB_BACKEND=mysql
+   DB_HOST=<mysql-host-uit-strato>
+   DB_PORT=3306
+   DB_NAME=<db-naam>
+   DB_USER=<db-gebruiker>
+   DB_PASS=<db-wachtwoord>
+   JWT_SECRET=<sterk_geheim>
+   INVOICE_OUTPUT_DIR=/home/strato/tmp/hardcups
+   ```
+
+   Maak de outputmap alvast aan:
+
+   ```bash
+   mkdir -p ~/tmp/hardcups
+   ```
+
+4. **Passenger configureren**
+
+   Maak in `~/python-apps/hardcups/` het bestand `passenger_wsgi.py` met:
+
+   ```python
+   import os
+   from pathlib import Path
+
+   BASE_DIR = Path(__file__).resolve().parent
+   BACKEND_DIR = BASE_DIR / "backend"
+
+   # Virtuele omgeving activeren
+   activate_this = BACKEND_DIR / ".venv" / "bin" / "activate_this.py"
+   if activate_this.exists():
+       with open(activate_this) as f:
+           exec(f.read(), {"__file__": str(activate_this)})
+
+   # Omgevingsvariabelen laden
+   env_path = BACKEND_DIR / ".env"
+   if env_path.exists():
+       for line in env_path.read_text().splitlines():
+           if not line or line.strip().startswith("#"):
+               continue
+           key, _, value = line.partition("=")
+           os.environ.setdefault(key.strip(), value.strip())
+
+   from backend.app import app as application  # noqa: E402
+   ```
+
+   Passenger start automatisch de Flask-applicatie via de WSGI-`application`
+   variabele. Controleer de bestandsrechten (`chmod 640 passenger_wsgi.py`).
+
+5. **.htaccess toevoegen**
+
+   Maak in `~/httpdocs/app/api/` een `.htaccess` met:
+
+   ```apache
+   PassengerEnabled On
+   PassengerPython /home/strato/python-apps/hardcups/backend/.venv/bin/python
+   PassengerAppRoot /home/strato/python-apps/hardcups
+   PassengerBaseURI /app/api
+
+   # Zorg dat alleen /api/ naar Passenger gaat; overige paden blijven statisch
+   RewriteEngine On
+   RewriteCond %{REQUEST_URI} ^/app/api
+   RewriteRule ^/app/api(.*)$ /app/api$1 [PT,L]
+   ```
+
+   Hiermee draait de backend onder `/app/api`. Pas het pad aan als je de
+   frontend op een ander subpad of subdomein serveert.
+
+6. **Passenger herstarten**
+
+   Telkens wanneer je code of afhankelijkheden wijzigt:
+
+   ```bash
+   touch ~/python-apps/hardcups/tmp/restart.txt
+   ```
+
+   Bekijk logbestanden via `tail -f ~/log/passenger.log` bij fouten.
+
+### 4. Frontend-bestanden plaatsen
+
+1. Upload de inhoud van `frontend/` naar `~/httpdocs/app/` (of naar de map die je
+   aan jouw domein koppelt). Zorg dat `index.html`, `app.js`, `styles.css` en
+   assets allemaal aanwezig zijn.
+2. Controleer dat `index.html` verwijst naar de juiste paden. Als je de app op
+   een submap (`/app/`) draait, kloppen de relatieve verwijzingen standaard.
+3. Het API-adres kun je via het Instellingen-dashboard aanpassen. Stel na het
+   eerste inloggen `https://<jouwdomein>/app/api` in, zodat de frontend de
+   Passenger-backend aanspreekt.
+
+### 5. Database importeren
+
+Gebruik de Strato Database Manager (phpMyAdmin) om het schema te vullen:
+
+```bash
+mysql -h <mysql-host> -u <db-gebruiker> -p <db-naam> < backend/schema.sql
+```
+
+Heb je geen shell-toegang tot de database, upload dan `backend/schema.sql` via
+phpMyAdmin en voer het script daar uit. Start vervolgens de backend zodat de
+laatste migraties (zoals `allowed_dashboards` en `coin_transactions`) worden
+gecontroleerd.
+
+### 6. Testen en in productie nemen
+
+1. Ga naar `https://<jouwdomein>/app/` en log in met het adminaccount.
+2. Pas in Instellingen het API-adres aan naar jouw Passenger-pad en reset de
+   cache via de resetknop.
+3. Controleer of downloads (PDF/CSV) werken; bestanden worden opgeslagen in
+   `~/tmp/hardcups`. Verwijder oude bestanden periodiek om quota te besparen.
+4. Gebruik het Accounts-dashboard om klantaccounts alleen het dashboard
+   "klantportaal" te geven en wijs overige dashboards toe aan interne gebruikers.
+
+### 7. Beheer en troubleshooting
+
+- **Passenger-logboeken**: `tail -f ~/log/passenger.log` voor runtime-fouten.
+- **Resource-limieten**: zie je HTTP 503 of 500 met melding "process terminated",
+  controleer dan of het geheugen verbruikt wordt door zware exports. Verklein
+  datasets of voer deze buiten piekuren uit.
+- **Automatisch updaten**: bij gedeelde hosting zijn `git pull` en `pip install`
+  vaak trager. Plan updates via een maintenancevenster en herstart Passenger na
+  iedere wijziging.
+- **Back-ups**: download regelmatig de database via het Strato-paneel en maak
+  een kopie van `~/python-apps/hardcups/backend/.env` en `~/tmp/hardcups`.
+
+Met deze stappen kan HardCups ook op Strato Webhosting (Basic) draaien, zolang je
+rekening houdt met de gedeelde resources en het Passenger-model. Voor zwaardere
+workloads blijft een VPS of Managed Server aanbevolen, maar het Basic-pakket is
+geschikt voor kleinere installaties en demonstraties.
