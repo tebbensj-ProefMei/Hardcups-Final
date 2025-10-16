@@ -27,7 +27,37 @@
         <span>Wachtwoord</span>
         <input id="pass" name="password" type="password" autocomplete="current-password" required />
       </label>
-      <button type="submit" id="loginButton">Login</button>
+      <div class="form-actions">
+        <button type="submit" id="loginButton">Login</button>
+        <button type="button" id="forgotPasswordBtn" class="secondary">Wachtwoord vergeten</button>
+      </div>
+    </form>
+  </section>
+
+  <section id="resetView" class="login card hidden" aria-label="Wachtwoord reset">
+    <h2>Wachtwoord opnieuw instellen</h2>
+    <p class="muted">Alleen voor klantaccounts. Vul uw gegevens in om een nieuw wachtwoord te kiezen.</p>
+    <form id="resetForm" novalidate>
+      <label for="resetUsername">
+        <span>Gebruikersnaam</span>
+        <input id="resetUsername" type="text" autocomplete="username" required />
+      </label>
+      <label for="resetCustomerNumber">
+        <span>Klantnummer</span>
+        <input id="resetCustomerNumber" type="text" inputmode="numeric" required />
+      </label>
+      <label for="resetEmail">
+        <span>Email (optioneel)</span>
+        <input id="resetEmail" type="email" autocomplete="email" />
+      </label>
+      <label for="resetPassword">
+        <span>Nieuw wachtwoord</span>
+        <input id="resetPassword" type="password" autocomplete="new-password" required />
+      </label>
+      <div class="form-actions">
+        <button type="submit">Wachtwoord opslaan</button>
+        <button type="button" id="resetCancelBtn" class="secondary">Terug naar inloggen</button>
+      </div>
     </form>
   </section>
 
@@ -35,6 +65,7 @@
     <div class="app-layout">
       <nav id="sideNav" aria-label="Hoofdmenu">
         <div class="nav-items">
+          <button type="button" data-section="klantportaal">Mijn gegevens</button>
           <button type="button" data-section="dashboard">Dashboard</button>
           <button type="button" data-section="klanten">Klanten</button>
           <button type="button" data-section="voorraad">Voorraad</button>
@@ -49,6 +80,65 @@
       </nav>
 
       <main id="content" aria-live="polite">
+        <section id="klantportaal" class="card" aria-label="Mijn klantgegevens">
+          <h2>Mijn gegevens</h2>
+          <div class="panel">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-label">Naam</span>
+                <span id="customerNameDisplay" class="info-value">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Klantnummer</span>
+                <span id="customerNumberDisplay" class="info-value">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Email</span>
+                <span id="customerEmailDisplay" class="info-value">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Adres</span>
+                <span id="customerAddressDisplay" class="info-value">-</span>
+              </div>
+              <div class="info-item">
+                <span class="info-label">Munten ingenomen</span>
+                <span id="customerCoinsDisplay" class="info-value">0</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Hardcups overzicht</h3>
+            <div class="customer-stats">
+              <div class="stat-card" role="group" aria-label="Uitgegeven hardcups">
+                <span class="info-label">Uitgegeven</span>
+                <span id="customerHardcupsIssued" class="info-value">0</span>
+              </div>
+              <div class="stat-card" role="group" aria-label="Ingenomen hardcups">
+                <span class="info-label">Ingenomen</span>
+                <span id="customerHardcupsReturned" class="info-value">0</span>
+              </div>
+              <div class="stat-card" role="group" aria-label="Saldo hardcups">
+                <span class="info-label">Saldo</span>
+                <span id="customerHardcupsBalance" class="info-value">0</span>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Per product</h3>
+            <p class="muted">Overzicht van uitgegeven en ingenomen bekers.</p>
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Uitgegeven</th>
+                  <th>Ingenomen</th>
+                </tr>
+              </thead>
+              <tbody id="customerProductTabel"></tbody>
+            </table>
+          </div>
+        </section>
+
         <section id="dashboard" class="card active" aria-label="Dashboard">
           <h2>Dashboard</h2>
           <div class="dashboard-grid">
@@ -100,11 +190,11 @@
           <form id="nieuweKlantForm" class="panel" novalidate>
             <h3>Nieuwe klant aanmaken</h3>
             <div class="form-grid">
-              <label>Naam<br/><input id="nieuweKlantNaam" name="name" required /></label>
-              <label>Klantnummer<br/><input id="nieuweKlantNummer" name="number" required /></label>
-              <label>Email<br/><input id="nieuweKlantEmail" name="email" type="email" /></label>
-              <label>Adres<br/><input id="nieuweKlantAdres" name="address" /></label>
-              <label>NFC-tag<br/><input id="nieuweKlantNFC" name="nfc_code" /></label>
+              <label for="nieuweKlantNaam"><span>Naam</span><input id="nieuweKlantNaam" name="name" required /></label>
+              <label for="nieuweKlantNummer"><span>Klantnummer</span><input id="nieuweKlantNummer" name="number" required /></label>
+              <label for="nieuweKlantEmail"><span>Email</span><input id="nieuweKlantEmail" name="email" type="email" /></label>
+              <label for="nieuweKlantAdres"><span>Adres</span><input id="nieuweKlantAdres" name="address" /></label>
+              <label for="nieuweKlantNFC"><span>NFC-tag</span><input id="nieuweKlantNFC" name="nfc_code" /></label>
             </div>
             <button type="submit">Klant toevoegen</button>
           </form>
@@ -114,19 +204,23 @@
           </table>
           <div id="klantDetails" class="hidden" style="margin-top:14px">
             <h3>Klantdetails</h3>
-            <label>Naam<br/><input id="klantNaam" /></label>
-            <label>Email<br/><input id="klantEmail" type="email" /></label>
-            <label>Adres<br/><input id="klantAdres" /></label>
-            <label>Klantnummer<br/><input id="klantNummer" /></label>
-            <label>NFC-tag<br/>
-              <div class="input-with-button">
-                <input id="klantNFC" placeholder="Scan of voer NFC in" />
-                <button type="button" id="scanNFCBtn">Scan NFC</button>
-                <span id="nfcMode" class="pill hidden"></span>
-              </div>
-            </label>
-            <br/>
-            <button type="button" id="saveKlant">Opslaan</button>
+            <div class="form-grid">
+              <label for="klantNaam"><span>Naam</span><input id="klantNaam" /></label>
+              <label for="klantEmail"><span>Email</span><input id="klantEmail" type="email" /></label>
+              <label for="klantAdres"><span>Adres</span><input id="klantAdres" /></label>
+              <label for="klantNummer"><span>Klantnummer</span><input id="klantNummer" /></label>
+              <label for="klantNFC">
+                <span>NFC-tag</span>
+                <div class="input-with-button">
+                  <input id="klantNFC" placeholder="Scan of voer NFC in" />
+                  <button type="button" id="scanNFCBtn">Scan NFC</button>
+                  <span id="nfcMode" class="pill hidden"></span>
+                </div>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="saveKlant">Opslaan</button>
+            </div>
           </div>
         </section>
 
@@ -184,7 +278,8 @@
 
         <section id="transacties" class="card" aria-label="Uitgifte en Inname">
           <h2>Uitgifte &amp; Inname</h2>
-          <label>NFC/klantnummer<br/>
+          <label for="nfcInput">
+            <span>NFC/klantnummer</span>
             <div class="input-with-button">
               <input id="nfcInput" placeholder="Scan NFC of voer klantnummer in" />
               <button type="button" id="zoekKlantBtn">Zoek klant</button>
@@ -194,14 +289,15 @@
           </label>
           <div id="transactieKlant" class="muted" style="margin-top:6px;"></div>
           <br/>
-          <label>Product<br/>
+          <label for="transactieProduct">
+            <span>Product</span>
             <select id="transactieProduct">
               <option value="hardcups">Hardcups</option>
               <option value="champagne">Champagne Hardcups</option>
               <option value="cocktail">Cocktail Hardcups</option>
             </select>
           </label>
-          <label>Aantal<br/><input type="number" id="transactieAantal" value="1" min="1" /></label>
+          <label for="transactieAantal"><span>Aantal</span><input type="number" id="transactieAantal" value="1" min="1" /></label>
           <div class="button-row">
             <button type="button" id="uitgifteBtn">Uitgifte</button>
             <button type="button" id="innameBtn">Inname</button>
@@ -210,7 +306,7 @@
 
         <section id="facturen" class="card" aria-label="Facturen">
           <h2>Facturen</h2>
-          <label>Klant<br/><select id="factuurKlant"></select></label>
+          <label for="factuurKlant"><span>Klant</span><select id="factuurKlant"></select></label>
           <div class="button-row">
             <button type="button" id="dagAfrekeningBtn">Dagafrekening (PDF)</button>
             <button type="button" id="eindAfrekeningBtn">Eindafrekening (PDF)</button>
@@ -227,14 +323,15 @@
           <form id="coinIntakeForm" class="panel" novalidate>
             <h3>Munten innemen</h3>
             <div class="form-grid">
-              <label>Klantnummer of NFC<br/>
+              <label for="coinIdentifier">
+                <span>Klantnummer of NFC</span>
                 <div class="input-with-button">
                   <input id="coinIdentifier" placeholder="Klantnummer of NFC" required />
                   <button type="button" id="coinScanBtn">Scan NFC</button>
                 </div>
                 <span id="nfcModeCoins" class="pill hidden"></span>
               </label>
-              <label>Aantal munten<br/><input id="coinAmount" type="number" min="1" value="1" required /></label>
+              <label for="coinAmount"><span>Aantal munten</span><input id="coinAmount" type="number" min="1" value="1" required /></label>
             </div>
             <button type="submit">Inname registreren</button>
           </form>
@@ -282,21 +379,33 @@
           <div class="panel">
             <h3>Bestaande accounts</h3>
             <table>
-              <thead><tr><th>Gebruiker</th><th>Rol</th><th>Dashboards</th><th>Acties</th></tr></thead>
+              <thead><tr><th>Gebruiker</th><th>Rol</th><th>Klant</th><th>Dashboards</th><th>Acties</th></tr></thead>
               <tbody id="accountsTabel"></tbody>
             </table>
           </div>
           <form id="accountForm" class="panel" novalidate>
             <h3 id="accountFormTitle">Nieuw account</h3>
             <input type="hidden" id="accountId" />
-            <label>Gebruikersnaam<br/><input id="accountUsername" required /></label>
-            <label>Wachtwoord<br/><input id="accountPassword" type="password" placeholder="Laat leeg om ongewijzigd te laten" /></label>
-            <label>Rol<br/>
+            <label for="accountUsername">
+              <span>Gebruikersnaam</span>
+              <input id="accountUsername" required />
+            </label>
+            <label for="accountPassword">
+              <span>Wachtwoord</span>
+              <input id="accountPassword" type="password" placeholder="Laat leeg om ongewijzigd te laten" />
+            </label>
+            <label for="accountRole">
+              <span>Rol</span>
               <select id="accountRole">
                 <option value="medewerker">Medewerker</option>
                 <option value="admin">Admin</option>
                 <option value="klant">Klant</option>
               </select>
+            </label>
+            <label id="accountCustomerWrapper" class="hidden" for="accountCustomerNumber">
+              <span>Klantnummer</span>
+              <input id="accountCustomerNumber" list="customerNumberOptions" placeholder="Bij klantaccounts verplicht" />
+              <datalist id="customerNumberOptions"></datalist>
             </label>
             <fieldset>
               <legend>Toegang tot dashboards</legend>

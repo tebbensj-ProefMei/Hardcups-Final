@@ -319,6 +319,41 @@ form label span {
   margin-top: 16px;
 }
 
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 18px;
+}
+
+.info-item {
+  background: #fff;
+  border: 1px solid #e0e7f2;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: var(--card-shadow);
+}
+
+.info-label {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #5a6b80;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--pm-blue);
+}
+
+.customer-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
 #instellingen .form-actions {
   grid-column: 1 / -1;
   justify-content: flex-start;

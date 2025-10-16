@@ -1,6 +1,7 @@
 let API = "http://localhost:5000/api";
 const DASHBOARD_LABELS = {
   dashboard: "Dashboard",
+  klantportaal: "Mijn gegevens",
   klanten: "Klanten",
   voorraad: "Voorraad",
   transacties: "Uitgifte & Inname",
@@ -17,6 +18,7 @@ let ROLE = null;
 let ALLOWED_DASHBOARDS = [];
 let customersCache = [];
 let cupChart = null;
+let CURRENT_CUSTOMER = null;
 
 const SETTINGS_STORAGE_KEY = "hardcupsSettings";
 const DEFAULT_SETTINGS = {
@@ -122,6 +124,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   renderDashboardOptions();
 
+  const forgotBtn = document.getElementById("forgotPasswordBtn");
+  if (forgotBtn) {
+    forgotBtn.addEventListener("click", showResetForm);
+  }
+  const resetCancelBtn = document.getElementById("resetCancelBtn");
+  if (resetCancelBtn) {
+    resetCancelBtn.addEventListener("click", () => hideResetForm());
+  }
+  const resetForm = document.getElementById("resetForm");
+  if (resetForm) {
+    resetForm.addEventListener("submit", submitResetForm);
+  }
+
   document.getElementById("loginForm").addEventListener("submit", doLogin);
   document.getElementById("logoutButton").addEventListener("click", logout);
 
@@ -166,6 +181,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("accountForm").addEventListener("submit", saveAccount);
   document.getElementById("accountResetBtn").addEventListener("click", resetAccountForm);
+  const accountRole = document.getElementById("accountRole");
+  if (accountRole) {
+    accountRole.addEventListener("change", () => syncRoleSpecificFields());
+  }
+  syncRoleSpecificFields(true);
+  updateAccountCustomerOptions();
 
   const settingsForm = document.getElementById("settingsForm");
   if (settingsForm) {
@@ -179,6 +200,66 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+function showResetForm() {
+  const loginView = document.getElementById("loginView");
+  const resetView = document.getElementById("resetView");
+  if (!loginView || !resetView) return;
+  loginView.classList.add("hidden");
+  resetView.classList.remove("hidden");
+  const feedback = document.getElementById("resetFeedback");
+  if (feedback) {
+    feedback.textContent = "";
+  }
+}
+
+function hideResetForm(force = false) {
+  const loginView = document.getElementById("loginView");
+  const resetView = document.getElementById("resetView");
+  if (resetView) {
+    resetView.classList.add("hidden");
+  }
+  if (loginView) {
+    loginView.classList.remove("hidden");
+  }
+  const resetForm = document.getElementById("resetForm");
+  if (resetForm) {
+    resetForm.reset();
+  }
+  const feedback = document.getElementById("resetFeedback");
+  if (feedback) {
+    feedback.textContent = "";
+  }
+  return force;
+}
+
+async function submitResetForm(event) {
+  event.preventDefault();
+  const username = document.getElementById("resetUsername").value.trim();
+  const customerNumber = document.getElementById("resetCustomerNumber").value.trim();
+  const email = document.getElementById("resetEmail").value.trim();
+  const newPassword = document.getElementById("resetPassword").value;
+  if (!username || !customerNumber || !newPassword) {
+    return alert("Vul gebruikersnaam, klantnummer en nieuw wachtwoord in.");
+  }
+  const payload = { username, customerNumber, newPassword };
+  if (email) {
+    payload.email = email;
+  }
+  try {
+    const res = await fetch(`${API}/auth/customer-reset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Wachtwoord reset mislukt");
+    alert("Wachtwoord bijgewerkt. Log opnieuw in met uw nieuwe wachtwoord.");
+    hideResetForm();
+  } catch (err) {
+    alert(err.message);
+  }
+}
 
 async function doLogin(event) {
   event.preventDefault();
@@ -198,12 +279,17 @@ async function doLogin(event) {
     TOKEN = data.token;
     ROLE = data.role;
     ALLOWED_DASHBOARDS = resolveAllowedFromResponse(data.dashboards);
+    CURRENT_CUSTOMER = data.customer || null;
+    if (ROLE !== "klant") {
+      ALLOWED_DASHBOARDS = ALLOWED_DASHBOARDS.filter((key) => key !== "klantportaal");
+    }
     document.getElementById("userRole").textContent = `Ingelogd als ${username} (${ROLE})`;
     document.getElementById("loginView").classList.add("hidden");
     document.getElementById("appView").classList.remove("hidden");
     syncNavVisibility();
+    const defaultSection = ROLE === "klant" ? "klantportaal" : "dashboard";
     await initApp();
-    showSection("dashboard");
+    showSection(defaultSection);
   } catch (err) {
     alert(err.message);
   }
@@ -214,6 +300,7 @@ function logout() {
   ROLE = null;
   ALLOWED_DASHBOARDS = [];
   customersCache = [];
+  CURRENT_CUSTOMER = null;
   if (cupChart) {
     cupChart.destroy();
     cupChart = null;
@@ -222,6 +309,7 @@ function logout() {
   document.getElementById("loginForm").reset();
   document.getElementById("appView").classList.add("hidden");
   document.getElementById("loginView").classList.remove("hidden");
+  hideResetForm(true);
   document.querySelectorAll("#appView section").forEach((section) => section.classList.remove("active"));
   document.querySelectorAll("#sideNav button[data-section]").forEach((btn) => btn.classList.remove("active"));
   resetCustomerDetails();
@@ -232,6 +320,10 @@ function logout() {
 function syncNavVisibility() {
   document.querySelectorAll("#sideNav button[data-section]").forEach((btn) => {
     const key = btn.dataset.section;
+    if (key === "klantportaal" && ROLE !== "klant") {
+      btn.classList.add("hidden");
+      return;
+    }
     if (ROLE === "admin" || ALLOWED_DASHBOARDS.includes(key)) {
       btn.classList.remove("hidden");
     } else {
@@ -240,6 +332,10 @@ function syncNavVisibility() {
   });
   document.querySelectorAll("#content > section").forEach((section) => {
     const key = section.id;
+    if (key === "klantportaal" && ROLE !== "klant") {
+      section.dataset.allowed = "false";
+      return;
+    }
     if (ROLE === "admin" || ALLOWED_DASHBOARDS.includes(key)) {
       section.dataset.allowed = "true";
     } else {
@@ -285,12 +381,19 @@ function onSectionShown(id) {
     case "dashboard":
       if (isAllowed("dashboard")) loadDashboard();
       break;
+    case "klantportaal":
+      if (ROLE === "klant") loadCustomerPortal();
+      break;
     default:
       break;
   }
 }
 
 async function initApp() {
+  if (ROLE === "klant") {
+    await loadCustomerPortal();
+    return;
+  }
   const tasks = [];
   if (isAllowed("dashboard")) tasks.push(loadDashboard());
   if (isAllowed("klanten")) tasks.push(loadCustomers());
@@ -482,6 +585,7 @@ async function loadCustomers() {
     const customers = await res.json();
     if (!res.ok) throw new Error(customers.error || "Fout klanten");
     customersCache = customers;
+    updateAccountCustomerOptions();
 
     const tbody = document.getElementById("klantenTabel");
     const sel = document.getElementById("factuurKlant");
@@ -832,9 +936,119 @@ async function loadCustomerSummary() {
   }
 }
 
+async function loadCustomerPortal() {
+  if (ROLE !== "klant") return;
+  try {
+    const res = await fetch(`${API}/customer/me`, { headers: authHeaders() });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Kon klantgegevens niet laden");
+    CURRENT_CUSTOMER = {
+      id: data.id,
+      number: data.number,
+      name: data.name,
+      email: data.email,
+      address: data.address,
+    };
+    const assignText = (id, value) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = value ?? "";
+    };
+    assignText("customerNameDisplay", data.name || "-");
+    assignText("customerNumberDisplay", data.number || "-");
+    assignText("customerEmailDisplay", data.email || "-");
+    assignText("customerAddressDisplay", data.address || "-");
+    assignText("customerHardcupsIssued", data.hardcups?.issued ?? 0);
+    assignText("customerHardcupsReturned", data.hardcups?.returned ?? 0);
+    assignText("customerHardcupsBalance", data.hardcups?.balance ?? 0);
+    assignText("customerCoinsDisplay", data.coins ?? 0);
+
+    const productLabels = {
+      hardcups: "Hardcups",
+      champagne: "Champagne Hardcups",
+      cocktail: "Cocktail Hardcups",
+    };
+    const tbody = document.getElementById("customerProductTabel");
+    if (tbody) {
+      tbody.innerHTML = "";
+      Object.entries(productLabels).forEach(([key, label]) => {
+        const issued = data.products?.issue?.[key] ?? 0;
+        const returned = data.products?.return?.[key] ?? 0;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${label}</td><td>${issued}</td><td>${returned}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function fetchCustomersForAccounts() {
+  if (!(ROLE === "admin" || isAllowed("klanten") || isAllowed("accounts"))) {
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/customers`, { headers: authHeaders() });
+    if (!res.ok) {
+      return;
+    }
+    const customers = await res.json();
+    customersCache = customers;
+    updateAccountCustomerOptions();
+  } catch (err) {
+    console.warn("Kon klantenlijst niet laden voor accounts", err);
+  }
+}
+
+function updateAccountCustomerOptions() {
+  const list = document.getElementById("customerNumberOptions");
+  if (!list) return;
+  list.innerHTML = "";
+  customersCache.forEach((c) => {
+    const option = document.createElement("option");
+    option.value = c.number;
+    option.label = `${c.number} - ${c.name}`;
+    list.appendChild(option);
+  });
+}
+
+function syncRoleSpecificFields(preserveCustomer = false) {
+  const roleField = document.getElementById("accountRole");
+  const wrapper = document.getElementById("accountCustomerWrapper");
+  const input = document.getElementById("accountCustomerNumber");
+  if (!roleField || !wrapper || !input) return;
+  const checkboxes = document.querySelectorAll("#accountDashboardOptions input[type='checkbox']");
+  if (roleField.value === "klant") {
+    wrapper.classList.remove("hidden");
+    checkboxes.forEach((cb) => {
+      if (cb.value === "klantportaal") {
+        cb.disabled = false;
+        cb.checked = true;
+      } else {
+        cb.checked = false;
+        cb.disabled = true;
+      }
+    });
+  } else {
+    wrapper.classList.add("hidden");
+    checkboxes.forEach((cb) => {
+      if (cb.value === "klantportaal") {
+        cb.checked = false;
+      }
+      cb.disabled = false;
+    });
+    if (!preserveCustomer) {
+      input.value = "";
+    }
+  }
+}
+
 async function loadAccounts() {
   if (!(ROLE === "admin" || isAllowed("accounts"))) return;
   try {
+    if (!customersCache.length) {
+      await fetchCustomersForAccounts();
+    }
     const res = await fetch(`${API}/users`, { headers: authHeaders() });
     const users = await res.json();
     if (!res.ok) throw new Error(users.error || "Fout bij laden accounts");
@@ -842,8 +1056,12 @@ async function loadAccounts() {
     tbody.innerHTML = "";
     users.forEach((user) => {
       const tr = document.createElement("tr");
-      const dashList = user.dashboards && user.dashboards.length ? user.dashboards.map((k) => DASHBOARD_LABELS[k] || k).join(", ") : "-";
-      tr.innerHTML = `<td>${user.username}</td><td>${user.role}</td><td>${dashList}</td>`;
+      const dashList =
+        user.dashboards && user.dashboards.length
+          ? user.dashboards.map((k) => DASHBOARD_LABELS[k] || k).join(", ")
+          : "-";
+      const customerDisplay = user.customer ? `${user.customer.number} - ${user.customer.name}` : "-";
+      tr.innerHTML = `<td>${user.username}</td><td>${user.role}</td><td>${customerDisplay}</td><td>${dashList}</td>`;
       const actionTd = document.createElement("td");
       const editBtn = document.createElement("button");
       editBtn.type = "button";
@@ -886,6 +1104,11 @@ function populateAccountForm(user) {
     .forEach((cb) => {
       cb.checked = allowed.has(cb.value);
     });
+  const customerInput = document.getElementById("accountCustomerNumber");
+  if (customerInput) {
+    customerInput.value = user.customer?.number || "";
+  }
+  syncRoleSpecificFields(true);
 }
 
 function resetAccountForm() {
@@ -898,6 +1121,9 @@ function resetAccountForm() {
   document
     .querySelectorAll("#accountDashboardOptions input[type='checkbox']")
     .forEach((cb) => (cb.checked = false));
+  const customerInput = document.getElementById("accountCustomerNumber");
+  if (customerInput) customerInput.value = "";
+  syncRoleSpecificFields();
 }
 
 async function saveAccount(event) {
@@ -909,6 +1135,7 @@ async function saveAccount(event) {
   const username = document.getElementById("accountUsername").value.trim();
   const password = document.getElementById("accountPassword").value;
   const role = document.getElementById("accountRole").value;
+  const customerNumber = document.getElementById("accountCustomerNumber").value.trim();
   const dashboards = Array.from(
     document.querySelectorAll("#accountDashboardOptions input[type='checkbox']")
   )
@@ -917,8 +1144,23 @@ async function saveAccount(event) {
 
   if (!username) return alert("Gebruikersnaam is verplicht.");
   if (!id && password.length < 6) return alert("Wachtwoord minimaal 6 tekens.");
+  if (role === "klant" && !customerNumber) {
+    return alert("Klantnummer is verplicht voor klantaccounts.");
+  }
 
-  const payload = { role, dashboards };
+  let filteredDashboards = dashboards;
+  if (role === "klant") {
+    filteredDashboards = ["klantportaal"];
+  } else {
+    filteredDashboards = dashboards.filter((d) => d !== "klantportaal");
+  }
+
+  const payload = { role, dashboards: filteredDashboards };
+  if (role === "klant") {
+    payload.customerNumber = customerNumber;
+  } else if (id) {
+    payload.customerNumber = null;
+  }
   if (!id || password) payload.password = password;
   if (!id) payload.username = username;
 

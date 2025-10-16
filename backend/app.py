@@ -16,7 +16,7 @@ from sqlalchemy import (
     text,
     inspect,
 )
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, joinedload
 from sqlalchemy.exc import IntegrityError
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -63,6 +63,7 @@ CORS(app)
 # ---------- MODELS ----------
 AVAILABLE_DASHBOARDS = [
     "dashboard",
+    "klantportaal",
     "klanten",
     "voorraad",
     "transacties",
@@ -86,6 +87,7 @@ class User(Base):
     )
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
     allowed_dashboards = Column(String(255), nullable=False, default="dashboard")
+    customer = relationship("Customer")
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -243,13 +245,72 @@ def login():
     s = SessionLocal()
     try:
         payload = request.json or {}
-        u = s.query(User).filter(User.username == payload.get("username")).first()
+        u = (
+            s.query(User)
+            .options(joinedload(User.customer))
+            .filter(User.username == payload.get("username"))
+            .first()
+        )
         if not u or not check_password_hash(u.password_hash, payload.get("password","")):
             return jsonify({"error": "Invalid credentials"}), 401
         exp = datetime.now(tz=timezone.utc) + timedelta(hours=8)
         dashboards = resolve_dashboards(u.allowed_dashboards)
-        token = jwt.encode({"sub": u.username, "role": u.role, "dashboards": dashboards, "exp": exp}, JWT_SECRET, algorithm="HS256")
-        return jsonify({"token": token, "role": u.role, "dashboards": dashboards})
+        customer_payload = None
+        if u.role == "klant":
+            dashboards = ["klantportaal"]
+            if u.customer:
+                customer_payload = {
+                    "id": u.customer.id,
+                    "number": u.customer.number,
+                    "name": u.customer.name,
+                    "email": u.customer.email,
+                    "address": u.customer.address,
+                }
+        token = jwt.encode(
+            {"sub": u.username, "role": u.role, "dashboards": dashboards, "exp": exp},
+            JWT_SECRET,
+            algorithm="HS256",
+        )
+        response = {"token": token, "role": u.role, "dashboards": dashboards}
+        if customer_payload:
+            response["customer"] = customer_payload
+        return jsonify(response)
+    finally:
+        s.close()
+
+
+@app.post("/api/auth/customer-reset")
+def customer_reset_password():
+    data = request.json or {}
+    username = (data.get("username") or "").strip()
+    customer_number = normalize_customer_number(
+        data.get("customerNumber") or data.get("customer_number")
+    )
+    email = (data.get("email") or "").strip().lower()
+    new_password = data.get("newPassword") or data.get("new_password") or ""
+
+    if not username or not customer_number or not new_password:
+        return jsonify({"error": "Gebruikersnaam, klantnummer en nieuw wachtwoord zijn verplicht"}), 400
+    if len(new_password) < 6:
+        return jsonify({"error": "Nieuw wachtwoord minimaal 6 tekens"}), 400
+
+    s = SessionLocal()
+    try:
+        user = get_user_by_username(s, username)
+        if not user or user.role != "klant":
+            return jsonify({"error": "Account niet gevonden"}), 404
+        if not user.customer_id:
+            return jsonify({"error": "Account is niet gekoppeld aan een klant"}), 400
+        customer = s.query(Customer).get(user.customer_id)
+        if not customer or customer.number != customer_number:
+            return jsonify({"error": "Klantnummer komt niet overeen"}), 400
+        stored_email = (customer.email or "").strip().lower()
+        if stored_email:
+            if not email or stored_email != email:
+                return jsonify({"error": "Emailadres komt niet overeen"}), 400
+        user.password_hash = generate_password_hash(new_password)
+        s.commit()
+        return jsonify({"ok": True})
     finally:
         s.close()
 
@@ -258,12 +319,48 @@ def get_user_by_username(s, username):
     return s.query(User).filter(User.username == username).first()
 
 
+def normalize_customer_number(value):
+    if value is None:
+        return None
+    number = str(value).strip()
+    if not number:
+        return None
+    return number.zfill(2)
+
+
+def aggregate_customer_totals(s, customer_id):
+    tx_rows = (
+        s.query(
+            Transaction.product_key,
+            Transaction.tx_type,
+            func.coalesce(func.sum(Transaction.amount), 0).label("total"),
+        )
+        .filter(Transaction.customer_id == customer_id)
+        .group_by(Transaction.product_key, Transaction.tx_type)
+        .all()
+    )
+    totals = {"issue": {}, "return": {}}
+    for product_key, tx_type, total in tx_rows:
+        totals.setdefault(tx_type, {})[product_key] = int(total)
+    coins_total = (
+        s.query(func.coalesce(func.sum(CoinTransaction.amount), 0))
+        .filter(CoinTransaction.customer_id == customer_id)
+        .scalar()
+    )
+    return totals, int(coins_total or 0)
+
+
 @app.get("/api/users")
 @auth_required(roles=["admin"], dashboards=["accounts"])
 def list_users():
     s = SessionLocal()
     try:
-        users = s.query(User).order_by(User.username.asc()).all()
+        users = (
+            s.query(User)
+            .options(joinedload(User.customer))
+            .order_by(User.username.asc())
+            .all()
+        )
         items = []
         for u in users:
             items.append(
@@ -272,6 +369,14 @@ def list_users():
                     "username": u.username,
                     "role": u.role,
                     "dashboards": resolve_dashboards(u.allowed_dashboards),
+                    "customer":
+                        {
+                            "id": u.customer.id,
+                            "number": u.customer.number,
+                            "name": u.customer.name,
+                        }
+                        if u.customer
+                        else None,
                 }
             )
         return jsonify(items)
@@ -287,6 +392,9 @@ def create_user():
     password = data.get("password") or ""
     role = data.get("role") or "medewerker"
     dashboards = resolve_dashboards(data.get("dashboards") or [])
+    customer_number = normalize_customer_number(
+        data.get("customerNumber") or data.get("customer_number")
+    )
     if not username or not password:
         return jsonify({"error": "Gebruikersnaam en wachtwoord verplicht"}), 400
     if len(password) < 6:
@@ -298,12 +406,26 @@ def create_user():
     try:
         if get_user_by_username(s, username):
             return jsonify({"error": "Gebruikersnaam bestaat al"}), 400
+        customer_id = None
+        if role == "klant":
+            if not customer_number:
+                return jsonify({"error": "Klantnummer is verplicht voor klantaccounts"}), 400
+            customer = (
+                s.query(Customer)
+                .filter(Customer.number == customer_number)
+                .first()
+            )
+            if not customer:
+                return jsonify({"error": "Klantnummer niet gevonden"}), 404
+            customer_id = customer.id
+            dashboards = ["klantportaal"]
         stored_dashboards = dashboards_to_store(dashboards)
         user = User(
             username=username,
             password_hash=generate_password_hash(password),
             role=role,
             allowed_dashboards=stored_dashboards,
+            customer_id=customer_id,
         )
         s.add(user)
         s.commit()
@@ -326,9 +448,33 @@ def update_user(user_id):
             if role not in {"admin", "medewerker", "klant"}:
                 return jsonify({"error": "Ongeldige rol"}), 400
             user.role = role
-        dashboards = data.get("dashboards")
-        if dashboards is not None:
-            user.allowed_dashboards = dashboards_to_store(resolve_dashboards(dashboards))
+        target_role = user.role
+        customer_number = normalize_customer_number(
+            data.get("customerNumber") or data.get("customer_number")
+        )
+        if target_role == "klant":
+            if customer_number:
+                customer = (
+                    s.query(Customer)
+                    .filter(Customer.number == customer_number)
+                    .first()
+                )
+                if not customer:
+                    return jsonify({"error": "Klantnummer niet gevonden"}), 404
+                user.customer_id = customer.id
+            if not user.customer_id:
+                return jsonify({"error": "Klantaccount vereist koppeling met klantnummer"}), 400
+            user.allowed_dashboards = dashboards_to_store(["klantportaal"])
+        else:
+            if user.customer_id:
+                user.customer_id = None
+            dashboards = data.get("dashboards")
+            if dashboards is not None:
+                user.allowed_dashboards = dashboards_to_store(
+                    resolve_dashboards(dashboards)
+                )
+            elif data.get("role"):
+                user.allowed_dashboards = dashboards_to_store(["dashboard"])
         new_password = data.get("password")
         if new_password:
             if len(new_password) < 6:
@@ -657,6 +803,52 @@ def customers_summary():
         return jsonify(results)
     finally:
         s.close()
+
+
+@app.get("/api/customer/me")
+@auth_required(roles=["klant"], dashboards=["klantportaal"])
+def customer_self():
+    s = SessionLocal()
+    try:
+        username = request.user.get("sub")
+        if not username:
+            return jsonify({"error": "Onbekende gebruiker"}), 400
+        user = get_user_by_username(s, username)
+        if not user or not user.customer_id:
+            return jsonify({"error": "Account niet gekoppeld aan een klant"}), 400
+        customer = s.query(Customer).get(user.customer_id)
+        if not customer:
+            return jsonify({"error": "Klant niet gevonden"}), 404
+        totals, coins_total = aggregate_customer_totals(s, customer.id)
+        issue_totals = totals.get("issue", {})
+        return_totals = totals.get("return", {})
+
+        issued_hardcups = int(issue_totals.get("hardcups", 0))
+        returned_hardcups = int(return_totals.get("hardcups", 0))
+
+        return jsonify(
+            {
+                "id": customer.id,
+                "number": customer.number,
+                "name": customer.name,
+                "email": customer.email,
+                "address": customer.address,
+                "hardcups": {
+                    "issued": issued_hardcups,
+                    "returned": returned_hardcups,
+                    "balance": issued_hardcups - returned_hardcups,
+                },
+                "products": {
+                    "issue": {k: int(v) for k, v in issue_totals.items()},
+                    "return": {k: int(v) for k, v in return_totals.items()},
+                },
+                "coins": coins_total,
+            }
+        )
+    finally:
+        s.close()
+
+
 # Dashboard
 @app.get("/api/dashboard")
 @auth_required(roles=["admin","medewerker"], dashboards=["dashboard"])
