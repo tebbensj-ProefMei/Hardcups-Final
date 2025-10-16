@@ -696,7 +696,13 @@ async function scanNFCInto(inputId, pillId, callback) {
     const data = await res.json();
     if (res.ok && data.nfc_code) {
       document.getElementById(inputId).value = data.nfc_code;
-      showPill(pillId, data.mode === "hardware" ? "Hardware" : "Simulatie");
+      const modeLabel =
+        data.mode === "hardware"
+          ? "Hardware"
+          : data.mode === "bridge"
+          ? "Bridge"
+          : "Simulatie";
+      showPill(pillId, modeLabel);
       if (typeof callback === "function") callback();
     } else {
       hideElement(pillId);

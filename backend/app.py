@@ -15,6 +15,7 @@ from sqlalchemy import (
     func,
     text,
     inspect,
+    Boolean,
 )
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship, joinedload
 from sqlalchemy.exc import IntegrityError
@@ -28,6 +29,10 @@ from export_utils import export_transactions_csv, export_inventory_csv
 load_dotenv()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "choose_a_long_random_secret")
+NFC_MODE = os.getenv("NFC_MODE", "auto").lower()
+NFC_BRIDGE_TOKEN = os.getenv("NFC_BRIDGE_TOKEN")
+NFC_BRIDGE_MAX_AGE_SECONDS = int(os.getenv("NFC_BRIDGE_MAX_AGE_SECONDS", "30"))
+NFC_BRIDGE_SOURCE = os.getenv("NFC_BRIDGE_SOURCE", "bridge")
 
 DATABASE_URI = os.getenv("DATABASE_URL")
 if not DATABASE_URI:
@@ -125,6 +130,16 @@ class CoinTransaction(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     recorded_by = Column(String(64), nullable=True)
     customer = relationship("Customer")
+
+
+class NfcScan(Base):
+    __tablename__ = "nfc_scans"
+    id = Column(Integer, primary_key=True)
+    nfc_code = Column(String(128), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    consumed = Column(Boolean, default=False, nullable=False)
+    consumed_at = Column(DateTime, nullable=True)
+    source = Column(String(64), nullable=True)
 
 Base.metadata.create_all(bind=engine)
 
@@ -915,20 +930,123 @@ def export_inv_csv():
     finally:
         s.close()
 
-# NFC read (hardware + simulation fallback)
+
+@app.post("/api/nfc/push")
+def nfc_push():
+    if not _bridge_enabled():
+        return jsonify({"error": "NFC bridge niet geconfigureerd"}), 503
+
+    provided = request.headers.get("X-NFC-Bridge-Token") or request.args.get("token")
+    if not provided or provided != NFC_BRIDGE_TOKEN:
+        return jsonify({"error": "Ongeldige bridge-token"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    code = (payload.get("nfc_code") or payload.get("code") or "").strip()
+    if not code:
+        return jsonify({"error": "nfc_code ontbreekt"}), 400
+
+    source = payload.get("source") or NFC_BRIDGE_SOURCE
+    session = SessionLocal()
+    try:
+        scan = NfcScan(nfc_code=code, source=source)
+        session.add(scan)
+        session.commit()
+        return (
+            jsonify(
+                {
+                    "status": "stored",
+                    "id": scan.id,
+                    "received_at": scan.created_at.replace(tzinfo=timezone.utc).isoformat(),
+                }
+            ),
+            201,
+        )
+    finally:
+        session.close()
+
+
+# NFC bridge helpers
+def _pop_pending_bridge_scan(session):
+    cutoff = datetime.utcnow() - timedelta(seconds=NFC_BRIDGE_MAX_AGE_SECONDS)
+    scan = (
+        session.query(NfcScan)
+        .filter(NfcScan.consumed.is_(False), NfcScan.created_at >= cutoff)
+        .order_by(NfcScan.created_at.asc())
+        .first()
+    )
+    if not scan:
+        return None
+    scan.consumed = True
+    scan.consumed_at = datetime.utcnow()
+    session.commit()
+    return scan
+
+
+def _bridge_enabled():
+    return bool(NFC_BRIDGE_TOKEN)
+
+
+# NFC read (hardware + bridge + simulation fallback)
 @app.get("/api/nfc/read")
 @auth_required(roles=["admin","medewerker"], dashboards=["klanten","transacties","munten"])
 def nfc_read():
-    try:
-        import nfc  # requires nfcpy
-        clf = nfc.ContactlessFrontend('usb')
-        tag = clf.connect(rdwr={'on-connect': lambda tag: False})
-        code = str(tag.identifier.hex())
-        clf.close()
-        return jsonify({"nfc_code": code, "mode": "hardware"})
-    except Exception as e:
-        sim_code = f"NFC{random.randint(10000,99999)}"
-        return jsonify({"nfc_code": sim_code, "mode": "simulation", "note": str(e)})
+    hardware_error = None
+    if NFC_MODE in ("auto", "hardware"):
+        try:
+            import nfc  # requires nfcpy
+
+            clf = nfc.ContactlessFrontend("usb")
+            tag = clf.connect(rdwr={"on-connect": lambda tag: False})
+            code = str(tag.identifier.hex())
+            clf.close()
+            return jsonify({"nfc_code": code, "mode": "hardware"})
+        except Exception as e:
+            hardware_error = str(e)
+            if NFC_MODE == "hardware" and not _bridge_enabled():
+                return (
+                    jsonify(
+                        {
+                            "error": "NFC-reader niet beschikbaar",
+                            "mode": "hardware",
+                            "note": hardware_error,
+                        }
+                    ),
+                    503,
+                )
+
+    if _bridge_enabled() and NFC_MODE in ("auto", "bridge"):
+        session = SessionLocal()
+        try:
+            scan = _pop_pending_bridge_scan(session)
+            if scan:
+                return jsonify(
+                    {
+                        "nfc_code": scan.nfc_code,
+                        "mode": "bridge",
+                        "source": scan.source or NFC_BRIDGE_SOURCE,
+                    }
+                )
+        finally:
+            session.close()
+        if NFC_MODE == "bridge":
+            return (
+                jsonify(
+                    {
+                        "error": "Geen recente NFC-scan ontvangen",
+                        "mode": "bridge",
+                    }
+                ),
+                404,
+            )
+
+    sim_note = hardware_error or (
+        "Bridge niet geconfigureerd" if NFC_MODE in ("auto", "bridge") else None
+    )
+    sim_code = f"NFC{random.randint(10000,99999)}"
+    payload = {"nfc_code": sim_code, "mode": "simulation"}
+    if sim_note:
+        payload["note"] = sim_note
+    return jsonify(payload)
 
 # Invoices PDF
 @app.post("/api/invoices/daily")
