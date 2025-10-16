@@ -2,8 +2,21 @@ HardCups-V2: Opstartprocedure (Windows, macOS & Linux)
 
 Overzicht
 ---------
-Dit document beschrijft hoe je het volledige HardCups-systeem (Flask-backend en statische frontend)
-op een eigen computer start. De stappen zijn getest op Windows 11 (PowerShell), macOS en Linux.
+Dit document is bedoeld voor iedereen die HardCups **lokaal op de eigen computer** wil draaien.
+Het beschrijft hoe je het volledige HardCups-systeem (Flask-backend en statische frontend) start.
+De stappen zijn getest op Windows 11 (PowerShell), macOS en Linux.
+
+Nieuwe functionaliteiten (Q4 2025)
+----------------------------------
+- Linkerzijbalk met verticale navigatie waarin alle dashboards bereikbaar zijn.
+- Extra dashboards: **Munten** (muntenregistratie), **Klantoverzicht** en een
+  vernieuwd hoofd-dashboard met grafiek voor uitgegeven versus ingenomen cups.
+- Accounts krijgen fijnmazige rechten; via het menu **Accounts** kun je
+  per gebruiker aanvinken tot welke dashboards hij/zij toegang heeft.
+- Voorraadniveaus kunnen direct worden overschreven en muntenintake wordt
+  gekoppeld aan klanten zonder de factuurlogica te beïnvloeden.
+- In het menu **Instellingen** stel je per apparaat het API-adres in; standaard
+  wijst dit naar de lokale backend (`http://localhost:5000/api`).
 
 Nieuwe functionaliteiten (Q4 2025)
 ----------------------------------

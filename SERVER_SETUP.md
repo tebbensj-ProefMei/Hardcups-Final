@@ -1,5 +1,15 @@
 HardCups serverhandleiding (Linux VPS/dedicated + MySQL 8)
 
+> **Alleen lokaal draaien?**
+>
+> De meeste gebruikers willen HardCups gewoon op hun eigen computer uitvoeren.
+> Volg in dat geval de stappen uit `LOCAL_STARTUP.txt`. Dat document behandelt
+> zowel Windows (PowerShell of dubbelklikken) als macOS/Linux, gebruikt standaard
+> de meegeleverde SQLite-database (`backend/proefmei.db`) en beschrijft hoe je
+> via het menu **Accounts** rechten toewijst. De rest van deze gids is vooral
+> relevant wanneer je het systeem op een externe server of gedeelde hosting wilt
+> plaatsen.
+
 **Benodigde schijfruimte**
 
 - Repository + configuratiebestanden: ±1 MB.
@@ -383,27 +393,17 @@ mkdir -p ~/httpdocs/app/api
    je in de WSGI-wrapper (zie stap 4) een loader toe:
 
    ```dotenv
-   DB_BACKEND=mysql
-   DB_HOST=<mysql-host-uit-strato>
-   DB_PORT=3306
-   DB_NAME=<db-naam>
-   DB_USER=<db-gebruiker>
-   DB_PASS=<db-wachtwoord>
-   JWT_SECRET=<sterk_geheim>
-   INVOICE_OUTPUT_DIR=/home/strato/tmp/hardcups
-   ```
+   # Gebruik standaard de lokale SQLite-database op gedeelde hosting
+   DB_BACKEND=sqlite
+   SQLITE_DB_PATH=/home/strato/python-apps/hardcups/backend/proefmei.db
 
-   Voor het huidige Strato-contract kun je onderstaande waarden invullen.
-   Alleen de host verschilt per database-server en staat in het Strato-paneel
-   (bijvoorbeeld `rdbms.strato.de` of `rdbms.strato.de:3310`).
-
-   ```dotenv
-   DB_BACKEND=mysql
-   DB_HOST=<hostnaam-uit-strato>
-   DB_PORT=3306
-   DB_NAME=dbs14863702
-   DB_USER=dbu4246501
-   DB_PASS=Proefmei2026!
+   # Schakel alleen over op MySQL wanneer je een externe database hebt ingericht
+   # DB_BACKEND=mysql
+   # DB_HOST=<mysql-host>
+   # DB_PORT=3306
+   # DB_NAME=<db-naam>
+   # DB_USER=<db-gebruiker>
+   # DB_PASS=<db-wachtwoord>
    JWT_SECRET=<sterk_geheim>
    INVOICE_OUTPUT_DIR=/home/strato/tmp/hardcups
    ```
@@ -488,17 +488,12 @@ mkdir -p ~/httpdocs/app/api
 
 ### 5. Database importeren
 
-Gebruik de Strato Database Manager (phpMyAdmin) om het schema te vullen:
+Gebruik de Strato Database Manager (phpMyAdmin) om het schema te vullen wanneer
+je MySQL inschakelt. Werk je volledig lokaal met SQLite, dan kun je deze stap
+overslaan.
 
 ```bash
 mysql -h <mysql-host> -u <db-gebruiker> -p <db-naam> < backend/schema.sql
-```
-
-Voor jouw MySQL 8-database bij Strato ziet dat er bijvoorbeeld zo uit:
-
-```bash
-mysql -h <hostnaam-uit-strato> -u dbu4246501 -p dbs14863702 < backend/schema.sql
-# wachtwoord: Proefmei2026!
 ```
 
 Heb je geen shell-toegang tot de database, upload dan `backend/schema.sql` via
