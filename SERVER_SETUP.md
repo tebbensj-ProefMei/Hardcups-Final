@@ -1,13 +1,23 @@
-HardCups serverhandleiding (Linux VPS/dedicated + MySQL 8)
+HardCups serverhandleiding (Linux of Windows VPS + MySQL 8/SQLite)
 
-> **Nieuwe PHP-hostingvariant**
+> **Nieuw (2026): volledige Windows-ondersteuning**
 >
-> Gebruik je gedeelde hosting zoals Strato Pakket (Apache + PHP)?
-> Deploy dan de map `php-backend/public` naar je webroot en laat de
-> statische frontend (`frontend/`) mee uploaden. Zie `php-backend/README.md`
-> voor de stappen om `.htaccess`, databaseconfiguratie en NFC-bridge in te
-> stellen. De rest van dit document beschrijft de originele Python-backend
-> op een eigen VPS of cloudomgeving.
+> Draai je HardCups op een Hetzner Windows Server of andere Windows-hosting?
+> Gebruik dan het script `start_windows.ps1`. Dat script maakt automatisch
+> een virtuele omgeving aan, installeert de Python-dependencies en start
+> zowel de Flask-backend als de statische frontend. In de sectie
+> [Windows Server (Hetzner / Windows Server 2022)](#windows-server-hetzner--windows-server-2022)
+> staan alle stappen om de server te configureren en – indien gewenst – als
+> Scheduled Task te laten opstarten.
+
+> **Nieuwe PHP-hostingvariant (optioneel)**
+>
+> Gebruik je gedeelde hosting zoals Strato Pakket (Apache + PHP) en heb je
+> geen toegang tot Python? Deploy dan de map `php-backend/public` naar je
+> webroot en laat de statische frontend (`frontend/`) mee uploaden. Zie
+> `php-backend/README.md` voor de stappen om `.htaccess`,
+> databaseconfiguratie en NFC-bridge in te stellen. De rest van dit document
+> beschrijft de Python-backend op een eigen VPS of cloudomgeving.
 
 > **Alleen lokaal draaien?**
 >
@@ -42,6 +52,69 @@ Snelle checklist
 > autorisatie. Zorg dat je na het opstarten admin-accounts gebruikt om per
 > gebruiker de gewenste dashboards (Munten, Klanten, Overzicht, etc.) toe te
 > wijzen. Alleen accounts met het dashboard "Munten" zien de nieuwe muntenviews.
+
+Windows Server (Hetzner / Windows Server 2022)
+----------------------------------------------
+De onderstaande stappen zijn getest op een Hetzner Cloud-instance met
+Windows Server 2022, maar werken ook op andere Windows-hosts (2019/2022)
+zolang PowerShell 5.1+ aanwezig is.
+
+1. **Voorbereiden**
+   - Log in via Remote Desktop als Administrator.
+   - Installeer updates via *Settings → Windows Update* en herstart indien nodig.
+   - Installeer Python en Git (via [winget](https://learn.microsoft.com/windows/package-manager/winget/)):  
+     ```powershell
+     winget install --id Python.Python.3.11
+     winget install --id Git.Git
+     ```
+     > Geen winget beschikbaar? Download de installers vanaf python.org en git-scm.com en voer ze handmatig uit.
+
+2. **Repository plaatsen**
+   ```powershell
+   cd C:\HardCups
+   git clone https://github.com/<jouw-org>/Hardcups-Final.git .
+   Copy-Item backend\env.example backend\.env -Force
+   ```
+   - Pas `backend\.env` aan met je productieconfiguratie (MySQL of SQLite).  
+     Laat `DB_BACKEND=sqlite` staan wanneer je de standaarddatabase wilt blijven gebruiken.
+
+3. **Backend + frontend starten**
+   - Open een PowerShell-venster in de projectmap en start het nieuwe script:
+     ```powershell
+     # Luister op alle interfaces zodat clients in je netwerk kunnen verbinden
+     $env:BACKEND_HOST = '0.0.0.0'
+     $env:FRONTEND_HOST = '0.0.0.0'
+     ./start_windows.ps1
+     ```
+   - Het script maakt automatisch `.venv\`, installeert `backend\requirements.txt`
+     en start de services. Sluit af door **Enter** te drukken.
+   - Gebruik `SKIP_PIP_INSTALL=1` wanneer je pip-installaties wilt overslaan, of
+     stel andere poorten in via `$env:BACKEND_PORT`/`$env:FRONTEND_PORT`.
+
+4. **Automatisch starten (Scheduled Task)**
+   1. Open *Task Scheduler* en kies **Create Task**.
+   2. Geef de taak een naam zoals "HardCups Server" en vink **Run whether user is logged on or not** aan.
+   3. Voeg een trigger toe "At startup" of "At log on" van het service-account.
+   4. Actie: **Start a program** met:
+      - Program/script: `powershell.exe`
+      - Add arguments: `-NoProfile -ExecutionPolicy Bypass -File "C:\HardCups\start_windows.ps1"`
+      - Start in: `C:\HardCups`
+   5. Sla op en voer de taak eenmalig handmatig uit om te testen.
+
+5. **Firewall + HTTPS**
+   - Sta verkeer toe op de gebruikte poorten:
+     ```powershell
+     New-NetFirewallRule -DisplayName 'HardCups Backend' -Direction Inbound -Protocol TCP -LocalPort 5000 -Action Allow
+     New-NetFirewallRule -DisplayName 'HardCups Frontend' -Direction Inbound -Protocol TCP -LocalPort 8001 -Action Allow
+     ```
+   - Voor publieke toegang wordt een reverse proxy (bijv. IIS + ARR of Nginx voor Windows) aanbevolen om HTTPS te termineren.
+
+6. **Lokaal testen blijft beschikbaar**
+   - Gebruik `LOCAL_STARTUP.txt` voor ontwikkelaars die lokaal willen draaien.
+   - Op Windows kun je hetzelfde `start_windows.ps1`-script gebruiken; op macOS/Linux is er
+     nu een korte alias `./start_local.sh` die `start_server.sh` aanroept.
+   - Zowel lokaal als op de server kun je via het dashboard **Instellingen** het API-adres
+     aanpassen (bijv. `http://127.0.0.1:5000/api` lokaal en `https://<server>/api` extern).
 
 Stap 1 – Verbinden en voorbereiden
 ----------------------------------
