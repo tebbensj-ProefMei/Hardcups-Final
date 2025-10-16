@@ -1,9 +1,11 @@
 ProefMei Backend (Flask + SQLite/MySQL + NFC + PDF)
 ==================================================
 
-> **Let op:** Heb je geen Python-toegang op je hostingpakket? Gebruik dan de
-> PHP-variant onder `php-backend/`. Die biedt dezelfde REST-API in puur PHP,
-> inclusief NFC-bridge, CSV-export en eenvoudige PDF-afrekeningen.
+> **Let op:** Je hebt geen aparte PHP-stack meer nodig op een Windows-server.
+> Gebruik het script `start_windows.ps1` (zie `SERVER_SETUP.md`) om de Python-
+> backend en frontend als services te starten. Geen Python-toegang beschikbaar?
+> Gebruik dan de PHP-variant onder `php-backend/`. Die biedt dezelfde REST-API
+> in puur PHP, inclusief NFC-bridge, CSV-export en eenvoudige PDF-afrekeningen.
 
 Overzicht van de nieuwste functionaliteiten
 -------------------------------------------
