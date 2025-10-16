@@ -1,4 +1,4 @@
-let API = "http://localhost:5000/api";
+let API = "/api";
 const DASHBOARD_LABELS = {
   dashboard: "Dashboard",
   klantportaal: "Mijn gegevens",
@@ -22,7 +22,7 @@ let CURRENT_CUSTOMER = null;
 
 const SETTINGS_STORAGE_KEY = "hardcupsSettings";
 const DEFAULT_SETTINGS = {
-  apiBase: "http://localhost:5000/api",
+  apiBase: "/api",
 };
 let SETTINGS = { ...DEFAULT_SETTINGS };
 
