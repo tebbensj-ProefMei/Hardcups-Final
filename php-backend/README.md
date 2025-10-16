@@ -26,7 +26,8 @@ Upload de map `public/` naar de webroot (bij Strato vaak `httpdocs/`).
 Zet de bestanden uit `frontend/` in dezelfde webroot zodat de SPA vanaf
 `index.html` geladen kan worden. De frontend verwacht standaard dat de
 API bereikbaar is op `/api` (relatief pad), dus geen verdere aanpassing
-nodig.
+nodig. Zoek je een stap-voor-stap handleiding specifiek voor Strato?
+Bekijk dan [`STRATO_INSTALLATIE.md`](./STRATO_INSTALLATIE.md).
 
 ## Configuratie
 
