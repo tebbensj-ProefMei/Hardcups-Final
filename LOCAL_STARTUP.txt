@@ -2,8 +2,21 @@ HardCups-V2: Opstartprocedure (Windows, macOS & Linux)
 
 Overzicht
 ---------
-Dit document beschrijft hoe je het volledige HardCups-systeem (Flask-backend en statische frontend)
-op een eigen computer start. De stappen zijn getest op Windows 11 (PowerShell), macOS en Linux.
+Dit document is bedoeld voor iedereen die HardCups **lokaal op de eigen computer** wil draaien.
+Het beschrijft hoe je het volledige HardCups-systeem (Flask-backend en statische frontend) start.
+De stappen zijn getest op Windows 11 (PowerShell), macOS en Linux.
+
+Nieuwe functionaliteiten (Q4 2025)
+----------------------------------
+- Linkerzijbalk met verticale navigatie waarin alle dashboards bereikbaar zijn.
+- Extra dashboards: **Munten** (muntenregistratie), **Klantoverzicht** en een
+  vernieuwd hoofd-dashboard met grafiek voor uitgegeven versus ingenomen cups.
+- Accounts krijgen fijnmazige rechten; via het menu **Accounts** kun je
+  per gebruiker aanvinken tot welke dashboards hij/zij toegang heeft.
+- Voorraadniveaus kunnen direct worden overschreven en muntenintake wordt
+  gekoppeld aan klanten zonder de factuurlogica te beïnvloeden.
+- In het menu **Instellingen** stel je per apparaat het API-adres in; standaard
+  wijst dit naar de lokale backend (`http://localhost:5000/api`).
 
 Voorwaarden
 -----------
@@ -61,6 +74,10 @@ Snelle start op Windows (PowerShell)
 6. Log in met de standaard admin-gegevens:
    - Gebruikersnaam: `Tebbensj`
    - Wachtwoord: `Proefmei2026!`
+   > **Na het inloggen**: open het menu **Accounts** om nieuwe gebruikers aan te
+   > maken of bestaande accounts dashboardrechten te geven (bijvoorbeeld toegang
+   > tot Munten of Klanten). Alleen accounts met het dashboard "Munten" zien de
+   > muntenmodule.
 7. Druk op **Enter** in hetzelfde PowerShell-venster om backend en frontend netjes te stoppen.
 
 Starten via dubbelklik of Opdrachtprompt
@@ -124,6 +141,8 @@ Handmatige opstart (PowerShell op Windows)
    ```
 5. **Inloggen**
    Gebruik opnieuw `Tebbensj` / `Proefmei2026!` om de applicatie te verkennen.
+   Bezoek daarna het dashboard **Accounts** om rechten voor andere gebruikers
+   toe te voegen of aan te passen.
 
 Handmatige opstart (macOS/Linux)
 --------------------------------
@@ -151,7 +170,8 @@ Handmatige opstart (macOS/Linux)
    ```
    De webinterface is bereikbaar op `http://<host>:<frontend-poort>`.
 5. **Inloggen**
-   Gebruik opnieuw `Tebbensj` / `Proefmei2026!`.
+   Gebruik opnieuw `Tebbensj` / `Proefmei2026!` en stel indien nodig de
+   dashboardrechten van andere accounts in via het menu **Accounts**.
 
 > **Tip**: pas de waarden voor `BACKEND_HOST`, `BACKEND_PORT` en de parameters van `http.server`
 > aan wanneer je andere poorten wilt gebruiken of alleen op een specifieke interface wilt luisteren.
