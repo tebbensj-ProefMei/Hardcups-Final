@@ -13,6 +13,8 @@ OUTPUT_DIR_ENV = "INVOICE_OUTPUT_DIR"
 
 from path_utils import ensure_output_dir
 
+from path_utils import ensure_output_dir
+
 PRIMARY = colors.HexColor("#002b5b")
 LIGHT_BG = colors.HexColor("#f7f9fc")
 TEXT = colors.black
@@ -28,7 +30,11 @@ BTW: NL001234567B01<br/>
 IBAN: NL00BANK0123456789""", styles["Normal"])
 
 def _header(story, title_text, print_date, styles):
-    logo_flow = Image(LOGO_PATH, width=35*mm, height=20*mm) if os.path.exists(LOGO_PATH) else Paragraph("", styles["Normal"])
+    if os.path.exists(LOGO_PATH):
+        logo_flow = Image(LOGO_PATH)
+        logo_flow._restrictSize(60 * mm, 25 * mm)
+    else:
+        logo_flow = Paragraph("", styles["Normal"])
     head_table = Table([[logo_flow, _company_info_paragraph(styles)]], colWidths=[60*mm, 110*mm])
     head_table.setStyle(TableStyle([("ALIGN", (1,0), (1,0), "RIGHT"), ("VALIGN", (0,0), (-1,-1), "MIDDLE")]))
     story.append(head_table)
