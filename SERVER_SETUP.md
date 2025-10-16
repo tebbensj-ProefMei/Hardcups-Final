@@ -19,6 +19,11 @@ Snelle checklist
 5. Applicatie starten met `./start_server.sh` of inrichten als systemd-service.
 6. (Optioneel) Reverse proxy (Nginx/Apache) voor publieke HTTPS-endpoints.
 
+> **Nieuw:** de applicatie bevat een muntenmodule en dashboard-gebaseerde
+> autorisatie. Zorg dat je na het opstarten admin-accounts gebruikt om per
+> gebruiker de gewenste dashboards (Munten, Klanten, Overzicht, etc.) toe te
+> wijzen. Alleen accounts met het dashboard "Munten" zien de nieuwe muntenviews.
+
 Stap 1 – Verbinden en voorbereiden
 ----------------------------------
 1. **SSH-verbinding**
@@ -141,6 +146,27 @@ Stap 4 – Configuratie (.env)
 
 3. Sla het bestand op en sluit de editor. Controleer dat er geen quotes of extra
    spaties aanwezig zijn.
+
+Schema-update voor dashboards & munten
+--------------------------------------
+Vanaf deze versie gebruikt de backend extra database-objecten:
+
+- Kolom `allowed_dashboards` op de `users`-tabel om per account de toegestane
+  dashboards op te slaan.
+- Tabel `coin_transactions` voor de muntenmodule.
+
+De Flask-app controleert dit automatisch bij het starten (`Base.metadata.create_all`
+en een aanvullende migratie). Bij een lege of nieuwe database hoef je niets te
+doen. Draait er al een oudere database, start dan de backend één keer zodat de
+kolom en tabel automatisch worden toegevoegd. Zie je SQL-fouten over ontbrekende
+kolommen, voer dan handmatig uit:
+
+```sql
+ALTER TABLE users ADD COLUMN allowed_dashboards VARCHAR(255) DEFAULT 'dashboard';
+```
+
+Daarna opnieuw starten. Zodra de migratie is uitgevoerd kun je vanuit de UI de
+dashboardrechten en muntenregistratie gebruiken.
 
 Stap 5 – Applicatie starten
 ---------------------------

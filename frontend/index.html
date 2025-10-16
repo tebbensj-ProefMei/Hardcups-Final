@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ProefMei</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" integrity="sha384-cFa9UWTaoUF/MEGLjm+rXhN3kLBXjg5eQof8RP4eAbOeXtfLOcAfeUOLuO/HEd1s" crossorigin="anonymous"></script>
   <script defer src="app.js"></script>
 </head>
 <body>
 <header>
-  <img src="logo.jpeg" alt="ProefMei Logo"/>
+  <img src="logo.jpeg" alt="ProefMei Logo" />
   <h1>ProefMei</h1>
   <div id="userRole" class="right" aria-live="polite"></div>
 </header>
@@ -30,140 +31,307 @@
     </form>
   </section>
 
-  <div id="appView" class="hidden" aria-live="polite">
-    <nav aria-label="Hoofdmenu">
-      <button type="button" data-section="dashboard">Dashboard</button>
-      <button type="button" data-section="klanten">Klanten</button>
-      <button type="button" data-section="voorraad">Voorraad</button>
-      <button type="button" data-section="transacties">Uitgifte &amp; Inname</button>
-      <button type="button" data-section="facturen">Facturen</button>
-      <button type="button" data-section="instellingen">Instellingen</button>
-      <button type="button" id="logoutButton" class="right">Uitloggen</button>
-    </nav>
-
-    <section id="dashboard" class="card active" aria-label="Dashboard">
-      <h2>Dashboard</h2>
-      <div class="grid" role="list">
-        <div class="card" role="listitem"><b>Beschikbare voorraad Hardcups</b><div id="stock-hardcups">0</div></div>
-        <div class="card" role="listitem"><b>Beschikbare voorraad Champagne</b><div id="stock-champagne">0</div></div>
-        <div class="card" role="listitem"><b>Beschikbare voorraad Cocktailglazen</b><div id="stock-cocktail">0</div></div>
-        <div class="card" role="listitem"><b>Uitgegeven Hardcups</b><div id="uitgifte-hardcups">0</div></div>
-        <div class="card" role="listitem"><b>Uitgegeven Champagnecups</b><div id="uitgifte-champagne">0</div></div>
-        <div class="card" role="listitem"><b>Uitgegeven Cocktailcups</b><div id="uitgifte-cocktail">0</div></div>
-      </div>
-    </section>
-
-    <section id="klanten" class="card" aria-label="Klantenbeheer">
-      <h2>Klanten</h2>
-      <table>
-        <thead><tr><th>Naam</th><th>Klantnummer</th><th>Email</th><th>Acties</th></tr></thead>
-        <tbody id="klantenTabel"></tbody>
-      </table>
-      <div id="klantDetails" class="hidden" style="margin-top:14px">
-        <h3>Klantdetails</h3>
-        <label>Naam<br/><input id="klantNaam" /></label>
-        <label>Email<br/><input id="klantEmail" type="email" /></label>
-        <label>Adres<br/><input id="klantAdres" /></label>
-        <label>Klantnummer<br/><input id="klantNummer" /></label>
-        <label>NFC-tag<br/>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="klantNFC" placeholder="Scan of voer NFC in" />
-            <button type="button" id="scanNFCBtn">Scan NFC</button>
-            <span id="nfcMode" class="pill hidden"></span>
-          </div>
-        </label>
-        <br/>
-        <button type="button" id="saveKlant">Opslaan</button>
-      </div>
-    </section>
-
-    <section id="voorraad" class="card" aria-label="Voorraadbeheer">
-      <h2>Voorraadbeheer</h2>
-      <p class="muted">Bulk toevoegen (admin) voor snelle correcties.</p>
-      <table>
-        <thead><tr><th>Product</th><th>In voorraad</th><th>Eenheid</th><th>Actie per stuk</th><th>Bulk toevoegen</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>Hardcups</td><td id="voorraadHardcups">0</td><td>stuks</td>
-            <td>
-              <button type="button" class="issue-btn" data-product="hardcups">Uitgifte</button>
-              <button type="button" class="return-btn" data-product="hardcups">Retour</button>
-            </td>
-            <td>
-              <input type="number" id="addHardcups" data-product="hardcups" min="1" value="100"/>
-              <button type="button" class="bulk-add" data-product="hardcups">Toevoegen</button>
-            </td>
-          </tr>
-          <tr>
-            <td>Champagne Hardcups</td><td id="voorraadChampagne">0</td><td>stuks</td>
-            <td>
-              <button type="button" class="issue-btn" data-product="champagne">Uitgifte</button>
-              <button type="button" class="return-btn" data-product="champagne">Retour</button>
-            </td>
-            <td>
-              <input type="number" id="addChampagne" data-product="champagne" min="1" value="50"/>
-              <button type="button" class="bulk-add" data-product="champagne">Toevoegen</button>
-            </td>
-          </tr>
-          <tr>
-            <td>Cocktail Hardcups</td><td id="voorraadCocktail">0</td><td>stuks</td>
-            <td>
-              <button type="button" class="issue-btn" data-product="cocktail">Uitgifte</button>
-              <button type="button" class="return-btn" data-product="cocktail">Retour</button>
-            </td>
-            <td>
-              <input type="number" id="addCocktail" data-product="cocktail" min="1" value="75"/>
-              <button type="button" class="bulk-add" data-product="cocktail">Toevoegen</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section id="transacties" class="card" aria-label="Uitgifte en Inname">
-      <h2>Uitgifte &amp; Inname</h2>
-      <label>NFC/klantnummer<br/>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="nfcInput" placeholder="Scan NFC of voer klantnummer in"/>
-          <button type="button" id="zoekKlantBtn">Zoek klant</button>
-          <button type="button" id="scanNFCInputBtn">Scan NFC</button>
-          <span id="nfcMode2" class="pill hidden"></span>
+  <div id="appView" class="hidden">
+    <div class="app-layout">
+      <nav id="sideNav" aria-label="Hoofdmenu">
+        <div class="nav-items">
+          <button type="button" data-section="dashboard">Dashboard</button>
+          <button type="button" data-section="klanten">Klanten</button>
+          <button type="button" data-section="voorraad">Voorraad</button>
+          <button type="button" data-section="transacties">Uitgifte &amp; Inname</button>
+          <button type="button" data-section="facturen">Facturen</button>
+          <button type="button" data-section="munten">Munten</button>
+          <button type="button" data-section="overzicht">Klantoverzicht</button>
+          <button type="button" data-section="accounts">Accounts</button>
+          <button type="button" data-section="instellingen">Instellingen</button>
         </div>
-      </label>
-      <div id="transactieKlant" class="muted" style="margin-top:6px;"></div>
-      <br/>
-      <label>Product<br/>
-        <select id="transactieProduct">
-          <option value="hardcups">Hardcups</option>
-          <option value="champagne">Champagne Hardcups</option>
-          <option value="cocktail">Cocktail Hardcups</option>
-        </select>
-      </label>
-      <label>Aantal<br/><input type="number" id="transactieAantal" value="1" min="1"/></label>
-      <div style="margin-top:10px">
-        <button type="button" id="uitgifteBtn">Uitgifte</button>
-        <button type="button" id="innameBtn">Inname</button>
-      </div>
-    </section>
+        <button type="button" id="logoutButton" class="logout-btn">Uitloggen</button>
+      </nav>
 
-    <section id="facturen" class="card" aria-label="Facturen">
-      <h2>Facturen</h2>
-      <label>Klant<br/><select id="factuurKlant"></select></label>
-      <div style="margin-top:8px">
-        <button type="button" id="dagAfrekeningBtn">Dagafrekening (PDF)</button>
-        <button type="button" id="eindAfrekeningBtn">Eindafrekening (PDF)</button>
-      </div>
-      <hr/>
-      <div>
-        <button type="button" id="txCsvBtn">Transacties CSV</button>
-        <button type="button" id="invCsvBtn">Voorraad CSV</button>
-      </div>
-    </section>
+      <main id="content" aria-live="polite">
+        <section id="dashboard" class="card active" aria-label="Dashboard">
+          <h2>Dashboard</h2>
+          <div class="dashboard-grid">
+            <div class="stat-card" role="group" aria-labelledby="stock-hardcups-label">
+              <div id="stock-hardcups-label" class="stat-title">Beschikbare voorraad Hardcups</div>
+              <div id="stock-hardcups" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="stock-champagne-label">
+              <div id="stock-champagne-label" class="stat-title">Beschikbare voorraad Champagne</div>
+              <div id="stock-champagne" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="stock-cocktail-label">
+              <div id="stock-cocktail-label" class="stat-title">Beschikbare voorraad Cocktailglazen</div>
+              <div id="stock-cocktail" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="uitgifte-hardcups-label">
+              <div id="uitgifte-hardcups-label" class="stat-title">Uitgegeven Hardcups</div>
+              <div id="uitgifte-hardcups" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="uitgifte-champagne-label">
+              <div id="uitgifte-champagne-label" class="stat-title">Uitgegeven Champagnecups</div>
+              <div id="uitgifte-champagne" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="uitgifte-cocktail-label">
+              <div id="uitgifte-cocktail-label" class="stat-title">Uitgegeven Cocktailcups</div>
+              <div id="uitgifte-cocktail" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="inname-hardcups-label">
+              <div id="inname-hardcups-label" class="stat-title">Ingenomen Hardcups</div>
+              <div id="inname-hardcups" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="inname-champagne-label">
+              <div id="inname-champagne-label" class="stat-title">Ingenomen Champagnecups</div>
+              <div id="inname-champagne" class="stat-value">0</div>
+            </div>
+            <div class="stat-card" role="group" aria-labelledby="inname-cocktail-label">
+              <div id="inname-cocktail-label" class="stat-title">Ingenomen Cocktailcups</div>
+              <div id="inname-cocktail" class="stat-value">0</div>
+            </div>
+          </div>
+          <div class="card" aria-label="Verhouding uitgegeven vs. ingenomen cups">
+            <h3>Verhouding uitgegeven vs. ingenomen</h3>
+            <canvas id="cupChart" height="220"></canvas>
+          </div>
+        </section>
 
-    <section id="instellingen" class="card" aria-label="Instellingen">
-      <h2>Instellingen</h2>
-      <p class="muted">Autorisatie ingeschakeld. Alleen admin kan klanten/voorraad wijzigen.</p>
-    </section>
+        <section id="klanten" class="card" aria-label="Klantenbeheer">
+          <h2>Klanten</h2>
+          <form id="nieuweKlantForm" class="panel" novalidate>
+            <h3>Nieuwe klant aanmaken</h3>
+            <div class="form-grid">
+              <label>Naam<br/><input id="nieuweKlantNaam" name="name" required /></label>
+              <label>Klantnummer<br/><input id="nieuweKlantNummer" name="number" required /></label>
+              <label>Email<br/><input id="nieuweKlantEmail" name="email" type="email" /></label>
+              <label>Adres<br/><input id="nieuweKlantAdres" name="address" /></label>
+              <label>NFC-tag<br/><input id="nieuweKlantNFC" name="nfc_code" /></label>
+            </div>
+            <button type="submit">Klant toevoegen</button>
+          </form>
+          <table>
+            <thead><tr><th>Naam</th><th>Klantnummer</th><th>Email</th><th>Acties</th></tr></thead>
+            <tbody id="klantenTabel"></tbody>
+          </table>
+          <div id="klantDetails" class="hidden" style="margin-top:14px">
+            <h3>Klantdetails</h3>
+            <label>Naam<br/><input id="klantNaam" /></label>
+            <label>Email<br/><input id="klantEmail" type="email" /></label>
+            <label>Adres<br/><input id="klantAdres" /></label>
+            <label>Klantnummer<br/><input id="klantNummer" /></label>
+            <label>NFC-tag<br/>
+              <div class="input-with-button">
+                <input id="klantNFC" placeholder="Scan of voer NFC in" />
+                <button type="button" id="scanNFCBtn">Scan NFC</button>
+                <span id="nfcMode" class="pill hidden"></span>
+              </div>
+            </label>
+            <br/>
+            <button type="button" id="saveKlant">Opslaan</button>
+          </div>
+        </section>
+
+        <section id="voorraad" class="card" aria-label="Voorraadbeheer">
+          <h2>Voorraadbeheer</h2>
+          <p class="muted">Pas aantallen aan of corrigeer de voorraad.</p>
+          <table>
+            <thead><tr><th>Product</th><th>Voorraad instellen</th><th>Acties per stuk</th><th>Bulk toevoegen</th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Hardcups</td>
+                <td><input type="number" class="inventory-set" data-product="hardcups" min="0" value="0" /></td>
+                <td>
+                  <button type="button" class="issue-btn" data-product="hardcups">Uitgifte</button>
+                  <button type="button" class="return-btn" data-product="hardcups">Inname</button>
+                </td>
+                <td>
+                  <div class="inline-input">
+                    <input type="number" id="addHardcups" data-product="hardcups" min="1" value="100" />
+                    <button type="button" class="bulk-add" data-product="hardcups">Toevoegen</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>Champagne Hardcups</td>
+                <td><input type="number" class="inventory-set" data-product="champagne" min="0" value="0" /></td>
+                <td>
+                  <button type="button" class="issue-btn" data-product="champagne">Uitgifte</button>
+                  <button type="button" class="return-btn" data-product="champagne">Inname</button>
+                </td>
+                <td>
+                  <div class="inline-input">
+                    <input type="number" id="addChampagne" data-product="champagne" min="1" value="50" />
+                    <button type="button" class="bulk-add" data-product="champagne">Toevoegen</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>Cocktail Hardcups</td>
+                <td><input type="number" class="inventory-set" data-product="cocktail" min="0" value="0" /></td>
+                <td>
+                  <button type="button" class="issue-btn" data-product="cocktail">Uitgifte</button>
+                  <button type="button" class="return-btn" data-product="cocktail">Inname</button>
+                </td>
+                <td>
+                  <div class="inline-input">
+                    <input type="number" id="addCocktail" data-product="cocktail" min="1" value="75" />
+                    <button type="button" class="bulk-add" data-product="cocktail">Toevoegen</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section id="transacties" class="card" aria-label="Uitgifte en Inname">
+          <h2>Uitgifte &amp; Inname</h2>
+          <label>NFC/klantnummer<br/>
+            <div class="input-with-button">
+              <input id="nfcInput" placeholder="Scan NFC of voer klantnummer in" />
+              <button type="button" id="zoekKlantBtn">Zoek klant</button>
+              <button type="button" id="scanNFCInputBtn">Scan NFC</button>
+              <span id="nfcMode2" class="pill hidden"></span>
+            </div>
+          </label>
+          <div id="transactieKlant" class="muted" style="margin-top:6px;"></div>
+          <br/>
+          <label>Product<br/>
+            <select id="transactieProduct">
+              <option value="hardcups">Hardcups</option>
+              <option value="champagne">Champagne Hardcups</option>
+              <option value="cocktail">Cocktail Hardcups</option>
+            </select>
+          </label>
+          <label>Aantal<br/><input type="number" id="transactieAantal" value="1" min="1" /></label>
+          <div class="button-row">
+            <button type="button" id="uitgifteBtn">Uitgifte</button>
+            <button type="button" id="innameBtn">Inname</button>
+          </div>
+        </section>
+
+        <section id="facturen" class="card" aria-label="Facturen">
+          <h2>Facturen</h2>
+          <label>Klant<br/><select id="factuurKlant"></select></label>
+          <div class="button-row">
+            <button type="button" id="dagAfrekeningBtn">Dagafrekening (PDF)</button>
+            <button type="button" id="eindAfrekeningBtn">Eindafrekening (PDF)</button>
+          </div>
+          <hr/>
+          <div class="button-row">
+            <button type="button" id="txCsvBtn">Transacties CSV</button>
+            <button type="button" id="invCsvBtn">Voorraad CSV</button>
+          </div>
+        </section>
+
+        <section id="munten" class="card" aria-label="Muntenbeheer">
+          <h2>Munten</h2>
+          <form id="coinIntakeForm" class="panel" novalidate>
+            <h3>Munten innemen</h3>
+            <div class="form-grid">
+              <label>Klantnummer of NFC<br/>
+                <div class="input-with-button">
+                  <input id="coinIdentifier" placeholder="Klantnummer of NFC" required />
+                  <button type="button" id="coinScanBtn">Scan NFC</button>
+                </div>
+                <span id="nfcModeCoins" class="pill hidden"></span>
+              </label>
+              <label>Aantal munten<br/><input id="coinAmount" type="number" min="1" value="1" required /></label>
+            </div>
+            <button type="submit">Inname registreren</button>
+          </form>
+          <div class="panel">
+            <div class="panel-header">
+              <h3>Innamen per dag</h3>
+              <button type="button" id="refreshCoinStats">Vernieuw</button>
+            </div>
+            <table>
+              <thead><tr><th>Datum</th><th>Ingenomen munten</th></tr></thead>
+              <tbody id="coinsDailyTabel"></tbody>
+            </table>
+          </div>
+          <div class="panel">
+            <h3>Munten per klant</h3>
+            <table>
+              <thead><tr><th>Klant</th><th>Klantnummer</th><th>Totaal munten</th></tr></thead>
+              <tbody id="coinsCustomerTabel"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="overzicht" class="card" aria-label="Klantoverzicht">
+          <h2>Klantoverzicht</h2>
+          <p class="muted">Overzicht van uitgegeven en ingenomen bekers en munten per klant.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Klant</th>
+                <th>Uitgifte Hardcups</th>
+                <th>Inname Hardcups</th>
+                <th>Uitgifte Champagne</th>
+                <th>Inname Champagne</th>
+                <th>Uitgifte Cocktail</th>
+                <th>Inname Cocktail</th>
+                <th>Munten</th>
+              </tr>
+            </thead>
+            <tbody id="klantOverzichtTabel"></tbody>
+          </table>
+        </section>
+
+        <section id="accounts" class="card" aria-label="Accountbeheer">
+          <h2>Accountbeheer</h2>
+          <div class="panel">
+            <h3>Bestaande accounts</h3>
+            <table>
+              <thead><tr><th>Gebruiker</th><th>Rol</th><th>Dashboards</th><th>Acties</th></tr></thead>
+              <tbody id="accountsTabel"></tbody>
+            </table>
+          </div>
+          <form id="accountForm" class="panel" novalidate>
+            <h3 id="accountFormTitle">Nieuw account</h3>
+            <input type="hidden" id="accountId" />
+            <label>Gebruikersnaam<br/><input id="accountUsername" required /></label>
+            <label>Wachtwoord<br/><input id="accountPassword" type="password" placeholder="Laat leeg om ongewijzigd te laten" /></label>
+            <label>Rol<br/>
+              <select id="accountRole">
+                <option value="medewerker">Medewerker</option>
+                <option value="admin">Admin</option>
+                <option value="klant">Klant</option>
+              </select>
+            </label>
+            <fieldset>
+              <legend>Toegang tot dashboards</legend>
+              <div id="accountDashboardOptions" class="checkbox-grid"></div>
+            </fieldset>
+            <div class="form-actions">
+              <button type="submit" id="accountSaveBtn">Opslaan</button>
+              <button type="button" id="accountResetBtn" class="secondary">Nieuw account</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="instellingen" class="card" aria-label="Instellingen">
+          <h2>Instellingen</h2>
+          <p class="muted">Autorisatie ingeschakeld. Alleen accounts met de juiste rechten kunnen onderdelen wijzigen.</p>
+          <form id="settingsForm" class="form-grid" aria-label="Website-instellingen">
+            <div>
+              <label for="apiBase">API-adres</label>
+              <input
+                type="url"
+                id="apiBase"
+                name="apiBase"
+                placeholder="http://localhost:5000/api"
+                required
+              />
+              <small class="muted">Gebruik je lokale of externe backend. Wijzigingen gelden per apparaat.</small>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="primary">Opslaan</button>
+              <button type="button" id="resetSettingsBtn">Terug naar lokaal</button>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
   </div>
 </div>
 </body>

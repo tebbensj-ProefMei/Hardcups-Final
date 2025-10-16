@@ -1,7 +1,10 @@
 :root {
   --pm-blue: #002b5b;
+  --pm-blue-dark: #004080;
   --pm-grey: #e8eef4;
   --pm-text: #002b5b;
+  --pm-bg: #f7f9fc;
+  --card-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 * {
@@ -11,7 +14,7 @@
 body {
   margin: 0;
   font-family: "Segoe UI", Arial, sans-serif;
-  background: #f7f9fc;
+  background: var(--pm-bg);
   color: var(--pm-text);
 }
 
@@ -28,29 +31,28 @@ header img {
   height: 44px;
 }
 
+header h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  letter-spacing: 1px;
+}
+
 .container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }
 
 .card {
   background: #fff;
   border: 1px solid #e3e9f1;
-  border-radius: 8px;
-  padding: 18px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
 }
 
 h2 {
-  margin: 0 0 12px;
-}
-
-nav {
-  display: flex;
-  gap: 8px;
-  margin: 12px 0;
-  flex-wrap: wrap;
+  margin: 0 0 16px;
 }
 
 section {
@@ -92,7 +94,7 @@ select {
 input:focus,
 select:focus {
   border-color: var(--pm-blue);
-  box-shadow: 0 0 0 3px rgba(0, 43, 91, 0.1);
+  box-shadow: 0 0 0 3px rgba(0, 43, 91, 0.15);
 }
 
 button {
@@ -104,11 +106,11 @@ button {
   cursor: pointer;
   font-weight: 600;
   text-transform: uppercase;
-  transition: 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
 
 button:hover {
-  background: #004080;
+  background: var(--pm-blue-dark);
 }
 
 button[disabled] {
@@ -116,10 +118,25 @@ button[disabled] {
   cursor: not-allowed;
 }
 
+button.secondary {
+  background: #fff;
+  color: var(--pm-blue);
+  border: 1px solid var(--pm-blue);
+  text-transform: none;
+}
+
+button.secondary:hover {
+  background: rgba(0, 43, 91, 0.1);
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 10px;
+  margin-top: 12px;
   background: #fff;
 }
 
@@ -133,12 +150,7 @@ td {
 th {
   background: var(--pm-blue);
   color: #fff;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  font-weight: 600;
 }
 
 .pill {
@@ -147,7 +159,7 @@ th {
   color: var(--pm-blue);
   padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 form label {
@@ -163,4 +175,182 @@ form label span {
 
 .hidden {
   display: none !important;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 24px;
+}
+
+#sideNav {
+  background: #fff;
+  border: 1px solid #dbe3ee;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 600px;
+}
+
+#sideNav .nav-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#sideNav button {
+  width: 100%;
+  text-transform: none;
+  justify-content: flex-start;
+}
+
+#sideNav button[data-section] {
+  background: #f0f4fa;
+  color: var(--pm-blue);
+  border: 1px solid transparent;
+}
+
+#sideNav button[data-section]:hover,
+#sideNav button[data-section].active {
+  background: var(--pm-blue);
+  color: #fff;
+}
+
+.logout-btn {
+  margin-top: 16px;
+}
+
+#content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #dfe6f1;
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: var(--card-shadow);
+}
+
+.stat-title {
+  font-size: 0.9rem;
+  color: #4a5b70;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.panel {
+  background: #f9fbff;
+  border: 1px solid #dfe6f1;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 18px;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.checkbox-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.checkbox-grid input {
+  min-width: auto;
+}
+
+.input-with-button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-input {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+#instellingen .form-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-start;
+}
+
+#cupChart {
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+
+  #sideNav {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-height: auto;
+  }
+
+  #sideNav .nav-items {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  #sideNav button[data-section] {
+    flex: 1 1 140px;
+    text-align: center;
+  }
+
+  .logout-btn {
+    margin-top: 0;
+  }
 }
