@@ -393,6 +393,21 @@ mkdir -p ~/httpdocs/app/api
    INVOICE_OUTPUT_DIR=/home/strato/tmp/hardcups
    ```
 
+   Voor het huidige Strato-contract kun je onderstaande waarden invullen.
+   Alleen de host verschilt per database-server en staat in het Strato-paneel
+   (bijvoorbeeld `rdbms.strato.de` of `rdbms.strato.de:3310`).
+
+   ```dotenv
+   DB_BACKEND=mysql
+   DB_HOST=<hostnaam-uit-strato>
+   DB_PORT=3306
+   DB_NAME=dbs14863702
+   DB_USER=dbu4246501
+   DB_PASS=Proefmei2026!
+   JWT_SECRET=<sterk_geheim>
+   INVOICE_OUTPUT_DIR=/home/strato/tmp/hardcups
+   ```
+
    Maak de outputmap alvast aan:
 
    ```bash
@@ -477,6 +492,13 @@ Gebruik de Strato Database Manager (phpMyAdmin) om het schema te vullen:
 
 ```bash
 mysql -h <mysql-host> -u <db-gebruiker> -p <db-naam> < backend/schema.sql
+```
+
+Voor jouw MySQL 8-database bij Strato ziet dat er bijvoorbeeld zo uit:
+
+```bash
+mysql -h <hostnaam-uit-strato> -u dbu4246501 -p dbs14863702 < backend/schema.sql
+# wachtwoord: Proefmei2026!
 ```
 
 Heb je geen shell-toegang tot de database, upload dan `backend/schema.sql` via
