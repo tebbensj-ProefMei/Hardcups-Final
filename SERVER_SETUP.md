@@ -1,5 +1,14 @@
 HardCups serverhandleiding (Linux VPS/dedicated + MySQL 8)
 
+> **Nieuwe PHP-hostingvariant**
+>
+> Gebruik je gedeelde hosting zoals Strato Pakket (Apache + PHP)?
+> Deploy dan de map `php-backend/public` naar je webroot en laat de
+> statische frontend (`frontend/`) mee uploaden. Zie `php-backend/README.md`
+> voor de stappen om `.htaccess`, databaseconfiguratie en NFC-bridge in te
+> stellen. De rest van dit document beschrijft de originele Python-backend
+> op een eigen VPS of cloudomgeving.
+
 > **Alleen lokaal draaien?**
 >
 > De meeste gebruikers willen HardCups gewoon op hun eigen computer uitvoeren.

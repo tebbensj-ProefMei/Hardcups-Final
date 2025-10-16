@@ -1,6 +1,10 @@
 ProefMei Backend (Flask + SQLite/MySQL + NFC + PDF)
 ==================================================
 
+> **Let op:** Heb je geen Python-toegang op je hostingpakket? Gebruik dan de
+> PHP-variant onder `php-backend/`. Die biedt dezelfde REST-API in puur PHP,
+> inclusief NFC-bridge, CSV-export en eenvoudige PDF-afrekeningen.
+
 Overzicht van de nieuwste functionaliteiten
 -------------------------------------------
 De backend ondersteunt sinds de laatste release:
@@ -72,9 +76,35 @@ SQLite tips
 NFC lezen
 ---------
 GET /api/nfc/read (admin/medewerker)
-- Probeert eerst hardware via nfcpy ('usb')
-- Indien niet beschikbaar -> simulatiecode
-Response: { "nfc_code": "...", "mode": "hardware|simulation" }
+- Standaard probeert de backend een USB-lezer via nfcpy (`NFC_MODE=auto`).
+- Wanneer `NFC_MODE=bridge` of hardware faalt en een bridge-token is gezet,
+  wordt gekeken of er een recente scan is doorgestuurd via de bridge.
+- Zonder hardware of bridge blijft er een simulatiecode terugkomen (handig voor
+  demo's, maar niet voor productie).
+Response: `{ "nfc_code": "...", "mode": "hardware|bridge|simulation" }`
+
+Bridge configureren (Railway e.d.)
+----------------------------------
+Voor omgevingen zonder directe USB-toegang (zoals Railway) kun je een lokale
+bridge inzetten:
+
+1. Kies een geheime token en stel die in op de server (`NFC_BRIDGE_TOKEN`) en
+   lokaal. Optioneel stel je ook `NFC_MODE=bridge` in om hardwarepogingen over
+   te slaan en `NFC_BRIDGE_MAX_AGE_SECONDS` (standaard 30 seconden) om scans te
+   verwerpen die te oud zijn.
+2. Start de backend met deze variabelen. `/api/nfc/push` accepteert nu
+   `POST`-requests met header `X-NFC-Bridge-Token`.
+3. Draai lokaal de `nfc_bridge.py` helper (of stuur eigen requests) op een
+   machine met USB-lezer. Elke scan wordt naar de server gepusht en kan daarna
+   één keer worden opgehaald via `/api/nfc/read`.
+
+Voorbeeld-request:
+
+```
+POST /api/nfc/push
+Headers: X-NFC-Bridge-Token: <geheime token>
+Body: { "nfc_code": "NFC123", "source": "kassa-1" }
+```
 
 Belangrijke endpoints
 ---------------------
