@@ -6,6 +6,20 @@ from reportlab.lib import colors
 from reportlab.lib.units import mm
 from datetime import datetime
 import random, os
+from pathlib import Path
+import tempfile
+
+OUTPUT_DIR_ENV = "INVOICE_OUTPUT_DIR"
+
+from path_utils import ensure_output_dir
+
+from path_utils import ensure_output_dir
+
+from path_utils import ensure_output_dir
+
+from path_utils import ensure_output_dir
+
+from path_utils import ensure_output_dir
 
 from path_utils import ensure_output_dir
 
@@ -135,6 +149,16 @@ def _watermark(canvas, doc):
     canvas.drawCentredString(0, 0, "PRO FORMA")
     canvas.restoreState()
     _footer(canvas, doc)
+
+def _resolve_output_dir():
+    configured = os.getenv(OUTPUT_DIR_ENV)
+    if configured:
+        base = Path(configured)
+    else:
+        base = Path(tempfile.gettempdir()) / "hardcups_invoices"
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
 
 def build_invoice_pdf(customer, transactions, invoice_type="Afrekening", target_date=None):
     styles = getSampleStyleSheet()

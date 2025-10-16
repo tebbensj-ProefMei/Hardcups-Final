@@ -18,6 +18,18 @@ Nieuwe functionaliteiten (Q4 2025)
 - In het menu **Instellingen** stel je per apparaat het API-adres in; standaard
   wijst dit naar de lokale backend (`http://localhost:5000/api`).
 
+Nieuwe functionaliteiten (Q4 2025)
+----------------------------------
+- Linkerzijbalk met verticale navigatie waarin alle dashboards bereikbaar zijn.
+- Extra dashboards: **Munten** (muntenregistratie), **Klantoverzicht** en een
+  vernieuwd hoofd-dashboard met grafiek voor uitgegeven versus ingenomen cups.
+- Accounts krijgen fijnmazige rechten; via het menu **Accounts** kun je
+  per gebruiker aanvinken tot welke dashboards hij/zij toegang heeft.
+- Voorraadniveaus kunnen direct worden overschreven en muntenintake wordt
+  gekoppeld aan klanten zonder de factuurlogica te beïnvloeden.
+- In het menu **Instellingen** stel je per apparaat het API-adres in; standaard
+  wijst dit naar de lokale backend (`http://localhost:5000/api`).
+
 Voorwaarden
 -----------
 1. **Software**
