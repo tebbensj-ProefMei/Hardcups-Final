@@ -1,5 +1,23 @@
 ProefMei Backend (Flask + SQLite/MySQL + NFC + PDF)
 ==================================================
+
+Overzicht van de nieuwste functionaliteiten
+-------------------------------------------
+De backend ondersteunt sinds de laatste release:
+
+- **Dashboard-gebaseerde autorisatie** – gebruikersaccounts krijgen per dashboard
+  toegang (bijv. Dashboard, Klanten, Munten). Het JWT dat tijdens het inloggen
+  wordt teruggegeven bevat een `dashboards`-claim met de toegestane secties.
+- **Accountbeheer via API** – admins kunnen nieuwe gebruikers aanmaken,
+  wachtwoorden resetten en de toegestane dashboards aanpassen zonder handmatig in
+  de database te werken.
+- **Muntenadministratie** – intake van munten via NFC/klantnummer, rapportages
+  per dag en per klant en opslag in de nieuwe `coin_transactions`-tabel die los
+  staat van de facturen.
+- **Uitgebreide klant- en voorraadrapporten** – directe voorraadcorrecties,
+  klantoverzichten met uitgifte/retour per product en gecombineerde cijfers voor
+  munten.
+
 Installatie
 -----------
 1) Database
@@ -37,6 +55,9 @@ Inloggen
 --------
 Seed user: Tebbensj / Proefmei2026!  (rol: admin)
 
+Admins krijgen standaard toegang tot alle dashboards (`allowed_dashboards="*"`).
+Nieuwe accounts erven alleen de dashboards die je meegeeft bij het aanmaken.
+
 SQLite tips
 -----------
 - Controleer of backend/proefmei.db wordt aangemaakt na het eerste opstarten. Als het
@@ -57,16 +78,47 @@ Response: { "nfc_code": "...", "mode": "hardware|simulation" }
 
 Belangrijke endpoints
 ---------------------
-POST /api/auth/login -> {token, role}
-GET  /api/dashboard
-GET  /api/inventory
-POST /api/inventory/add_bulk       (admin)
-GET  /api/customers
-GET  /api/customers/<id>
-POST /api/customers                (admin)
-PUT  /api/customers/<id>           (admin)
-POST /api/transaction              (issue/return met klantnummer of NFC)
-POST /api/invoices/daily?customer=02&date=YYYY-MM-DD   -> PDF (Pro Forma)
-POST /api/invoices/final?customer=02                   -> PDF (Pro Forma)
-GET  /api/export/transactions.csv
-GET  /api/export/inventory.csv
+Onderstaande lijst is gegroepeerd op functionaliteit; alle routes gebruiken
+Bearer JWT-authenticatie.
+
+**Authenticatie & accounts**
+- `POST /api/auth/login` – retourneert `{token, role, dashboards}`.
+- `GET /api/users` – overzicht van alle accounts (alleen admins met dashboard
+  "accounts").
+- `POST /api/users` – nieuw account aanmaken met rol en toegestane dashboards.
+- `PUT /api/users/<id>` – rol, wachtwoord en dashboardrechten bijwerken.
+
+**Dashboard en rapportages**
+- `GET /api/dashboard` – voorraadoverzicht, uitgifte/retour en ratio voor de
+  grafiek van uitgegeven versus ingenomen cups.
+- `GET /api/customers/summary` – totaalbeeld per klant (uitgegeven, ingenomen,
+  munten) voor het klantoverzicht-dashboard.
+
+**Klantenbeheer**
+- `GET /api/customers` en `GET /api/customers/<id>` – ophalen van klantdata.
+- `POST /api/customers` – klant aanmaken incl. optionele NFC-tag.
+- `PUT /api/customers/<id>` – klantgegevens en NFC-tag aanpassen.
+
+**Voorraad en transacties**
+- `GET /api/inventory` – huidige voorraad per product.
+- `POST /api/inventory/add_bulk` – bulk-aanvulling (positieve aantallen).
+- `PUT /api/inventory/<product>` – direct aanpassen naar gewenst aantal.
+- `POST /api/transaction` – uitgifte/retour registreren (verlaagt/verhoogt
+  voorraad automatisch).
+
+**Muntenmodule**
+- `POST /api/coins/intake` – munten innemen op basis van klantnummer of
+  NFC-code.
+- `GET /api/coins/daily` – totaalsommen per dag (datumfilters optioneel).
+- `GET /api/coins/customers` – totaalstand munten per klant.
+
+**Facturen & export**
+- `POST /api/invoices/daily` – dagafrekening; accepteert klant via querystring
+  of JSON-body en levert een PDF.
+- `POST /api/invoices/final` – eindafrekening voor een klant.
+- `GET /api/export/transactions.csv` – CSV-export transacties.
+- `GET /api/export/inventory.csv` – CSV-export voorraad.
+
+Alle routes vereisen dat het JWT-account zowel de juiste rol als het
+bijbehorende dashboardrecht heeft. Zie de frontend voor het instellen per
+account.
